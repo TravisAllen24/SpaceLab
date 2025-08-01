@@ -5,10 +5,12 @@ import sys
 from typing import List
 from .graphics.renderer import Renderer
 from .physics.gravity import apply_gravitational_forces
+from .physics.collision import detect_collisions, create_impact_marker
 from .bodies.celestial_body import CelestialBody
 from .bodies.earth import Earth
 from .bodies.moon import Moon
 from .bodies.satellite import Satellite
+from .bodies.impact_marker import ImpactMarker
 from .config.settings import *
 
 
@@ -19,8 +21,18 @@ class SolarSystemSimulation:
         """Initialize the simulation."""
         self.renderer = Renderer()
         self.bodies: List[CelestialBody] = []
+        self.impact_markers: List[ImpactMarker] = []
         self.running = True
         self.paused = False
+
+        # Satellite creation drag state
+        self.is_dragging = False
+        self.drag_start_pos = None
+        self.drag_current_pos = None
+        self.velocity_scale_factor = 0.1  # Scale factor for converting pixels to km/s
+
+        # Satellite naming counter (tracks total satellites ever created)
+        self.total_satellites_created = 0
 
         # Initialize celestial bodies
         self._setup_bodies()
@@ -45,11 +57,68 @@ class SolarSystemSimulation:
             x_position=6771,  # Earth radius + 400km altitude
             y_position=0,
             x_velocity=0,
-            y_velocity=7.66,  # Correct orbital velocity
+            y_velocity=9,  # Correct orbital velocity
             color=(255, 255, 0)  # Yellow
         )
 
         self.bodies = [earth, moon, satellite]
+
+        # ISS counts as the first satellite created
+        self.total_satellites_created = 1
+
+    def _create_satellite_at_position(self, x: float, y: float) -> None:
+        """Create a new satellite at the given world coordinates with zero velocity."""
+        # Increment counter for unique naming
+        self.total_satellites_created += 1
+
+        new_satellite = Satellite(
+            name=f"Satellite-{self.total_satellites_created}",
+            radius_km=0.1,  # Small satellite
+            mass_kg=1000,  # 1 ton satellite
+            x_position=x,
+            y_position=y,
+            x_velocity=0,  # Zero initial velocity as requested
+            y_velocity=0,
+            color=(0, 255, 255)  # Cyan to distinguish from ISS
+        )
+        self.bodies.append(new_satellite)
+        print(f"Created {new_satellite.name} at position ({x:.1f}, {y:.1f}) km")
+
+    def _create_satellite_from_drag(self) -> None:
+        """Create a satellite from drag operation with calculated velocity."""
+        if not self.drag_start_pos or not self.drag_current_pos:
+            return
+
+        # Convert start position to world coordinates
+        world_x, world_y = self.renderer.screen_to_world(*self.drag_start_pos)
+
+        # Calculate drag vector in screen pixels
+        drag_vector_x = self.drag_current_pos[0] - self.drag_start_pos[0]
+        drag_vector_y = self.drag_current_pos[1] - self.drag_start_pos[1]
+
+        # Convert drag vector to velocity (km/s)
+        # Note: Y is flipped because screen Y increases downward but world Y increases upward
+        velocity_x = drag_vector_x * self.velocity_scale_factor
+        velocity_y = -drag_vector_y * self.velocity_scale_factor  # Flip Y axis
+
+        # Increment counter for unique naming
+        self.total_satellites_created += 1
+
+        new_satellite = Satellite(
+            name=f"Satellite-{self.total_satellites_created}",
+            radius_km=0.1,  # Small satellite
+            mass_kg=1000,  # 1 ton satellite
+            x_position=world_x,
+            y_position=world_y,
+            x_velocity=velocity_x,
+            y_velocity=velocity_y,
+            color=(0, 255, 255)  # Cyan to distinguish from ISS
+        )
+        self.bodies.append(new_satellite)
+
+        # Calculate speed for display
+        speed = (velocity_x**2 + velocity_y**2)**0.5
+        print(f"Created {new_satellite.name} at ({world_x:.1f}, {world_y:.1f}) km with velocity ({velocity_x:.2f}, {velocity_y:.2f}) km/s (speed: {speed:.2f} km/s)")
 
     def handle_events(self) -> None:
         """Handle pygame events."""
@@ -59,11 +128,30 @@ class SolarSystemSimulation:
             elif event.type == pygame.MOUSEWHEEL:
                 # Handle zoom
                 self.renderer.handle_zoom_event(event)
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 3:  # Right mouse button
+                    # Start dragging for satellite creation
+                    self.is_dragging = True
+                    self.drag_start_pos = event.pos
+                    self.drag_current_pos = event.pos
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 3 and self.is_dragging:  # Right mouse button release
+                    # End dragging and create satellite
+                    self._create_satellite_from_drag()
+                    self.is_dragging = False
+                    self.drag_start_pos = None
+                    self.drag_current_pos = None
+            elif event.type == pygame.MOUSEMOTION:
+                if self.is_dragging:
+                    # Update drag position
+                    self.drag_current_pos = event.pos
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     self.paused = not self.paused
                 elif event.key == pygame.K_r:
                     self._setup_bodies()  # Reset simulation
+                    self.impact_markers.clear()  # Clear impact markers
+                    # Note: _setup_bodies() already resets total_satellites_created to 1
                 elif event.key == pygame.K_l:
                     # Toggle labels
                     import solar_system.config.settings as settings
@@ -73,8 +161,9 @@ class SolarSystemSimulation:
                     import solar_system.config.settings as settings
                     settings.SHOW_TRAILS = not settings.SHOW_TRAILS
                 elif event.key == pygame.K_c:
-                    # Clear trails
+                    # Clear trails and impact markers
                     self.renderer.trails.clear()
+                    self.impact_markers.clear()
                 elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
                     # Zoom in with keyboard
                     self.renderer.zoom_in()
@@ -94,6 +183,17 @@ class SolarSystemSimulation:
             for body in self.bodies:
                 body.update(dt)
 
+            # Check for collisions
+            collisions = detect_collisions(self.bodies)
+            for satellite, target in collisions:
+                # Create impact marker at collision point
+                impact_marker = create_impact_marker(satellite, target)
+                self.impact_markers.append(impact_marker)
+
+                # Remove the satellite
+                self.bodies.remove(satellite)
+                print(f"{satellite.name} crashed into {target.name}!")
+
     def render(self) -> None:
         """Render the current frame."""
         self.renderer.clear_screen()
@@ -101,6 +201,18 @@ class SolarSystemSimulation:
         # Draw all celestial bodies
         for body in self.bodies:
             self.renderer.draw_body(body)
+
+        # Draw impact markers
+        for marker in self.impact_markers:
+            self.renderer.draw_impact_marker(marker)
+
+        # Draw velocity arrow if dragging
+        if self.is_dragging and self.drag_start_pos and self.drag_current_pos:
+            self.renderer.draw_velocity_arrow(
+                self.drag_start_pos,
+                self.drag_current_pos,
+                velocity_scale=self.velocity_scale_factor
+            )
 
         # Draw information
         self.renderer.draw_info(self.bodies)
@@ -121,13 +233,16 @@ class SolarSystemSimulation:
             "R: Reset simulation",
             "L: Toggle labels",
             "T: Toggle trails",
-            "C: Clear trails",
+            "C: Clear trails & impacts",
+            "Right-drag: Create satellite",
             "Scroll: Zoom in/out",
             "+/-: Zoom keyboard",
             "ESC: Exit"
         ]
 
-        y_offset = self.renderer.height - 180
+        # Calculate the total height needed and start from bottom
+        total_height = len(instructions) * 22
+        y_offset = self.renderer.height - total_height - 10  # 10px margin from bottom
         for instruction in instructions:
             text_surface = font.render(instruction, True, (255, 255, 255))
             self.renderer.screen.blit(text_surface, (10, y_offset))
@@ -151,7 +266,8 @@ class SolarSystemSimulation:
         print("  R: Reset simulation")
         print("  L: Toggle labels")
         print("  T: Toggle trails")
-        print("  C: Clear trails")
+        print("  C: Clear trails & impacts")
+        print("  Right-drag: Create satellite with velocity")
         print("  Mouse Wheel: Zoom in/out")
         print("  +/-: Zoom with keyboard")
         print("  ESC: Exit")

@@ -65,6 +65,12 @@ class Renderer:
         screen_y = int(CENTER_Y - y_km * SCALE_FACTOR * self.zoom)  # Flip Y axis
         return (screen_x, screen_y)
 
+    def screen_to_world(self, screen_x: int, screen_y: int) -> Tuple[float, float]:
+        """Convert screen coordinates (pixels) to world coordinates (km)."""
+        world_x = (screen_x - CENTER_X) / (SCALE_FACTOR * self.zoom)
+        world_y = (CENTER_Y - screen_y) / (SCALE_FACTOR * self.zoom)  # Flip Y axis back
+        return (world_x, world_y)
+
     def calculate_render_radius(self, body: CelestialBody) -> int:
         """Calculate the radius for rendering a celestial body."""
         # Scale the radius with zoom, but ensure it's visible
@@ -78,7 +84,7 @@ class Renderer:
         # Clear trails when zoom changes to prevent distortion
         if self.zoom != old_zoom:
             self.trails.clear()
-    
+
     def zoom_out(self) -> None:
         """Zoom out by the zoom speed."""
         old_zoom = self.zoom
@@ -86,7 +92,7 @@ class Renderer:
         # Clear trails when zoom changes to prevent distortion
         if self.zoom != old_zoom:
             self.trails.clear()
-    
+
     def handle_zoom_event(self, event) -> None:
         """Handle mouse wheel zoom events."""
         if event.type == pygame.MOUSEWHEEL:
@@ -176,6 +182,81 @@ class Renderer:
         """Clear the screen with background color and draw stars."""
         self.screen.fill(BACKGROUND_COLOR)
         self.draw_starfield()
+
+    def draw_impact_marker(self, marker) -> None:
+        """Draw a red X marker at an impact site."""
+        screen_pos = self.world_to_screen(marker.x_position, marker.y_position)
+
+        # Don't draw if off screen
+        if (screen_pos[0] < -50 or screen_pos[0] > self.width + 50 or
+            screen_pos[1] < -50 or screen_pos[1] > self.height + 50):
+            return
+
+        # Draw X marker
+        size = marker.size
+        x, y = screen_pos
+
+        # Draw the X with two lines
+        pygame.draw.line(self.screen, marker.color,
+                        (x - size, y - size), (x + size, y + size), 2)
+        pygame.draw.line(self.screen, marker.color,
+                        (x - size, y + size), (x + size, y - size), 2)
+
+    def draw_velocity_arrow(self, start_pos, end_pos, color=(255, 255, 0), velocity_scale=0.1) -> None:
+        """Draw an arrow showing velocity direction and magnitude."""
+        import math
+
+        # Don't draw if positions are the same
+        if start_pos == end_pos:
+            return
+
+        # Calculate arrow components
+        dx = end_pos[0] - start_pos[0]
+        dy = end_pos[1] - start_pos[1]
+        length = math.sqrt(dx * dx + dy * dy)
+
+        # Don't draw very short arrows
+        if length < 5:
+            return
+
+        # Draw main arrow line
+        pygame.draw.line(self.screen, color, start_pos, end_pos, 3)
+
+        # Draw arrowhead
+        if length > 10:  # Only draw arrowhead if arrow is long enough
+            angle = math.atan2(dy, dx)
+            arrowhead_length = min(length * 0.3, 15)  # Arrowhead size proportional to arrow length, max 15px
+            arrowhead_angle = 0.5  # Angle of arrowhead sides
+
+            # Calculate arrowhead points
+            arrowhead1_x = end_pos[0] - arrowhead_length * math.cos(angle - arrowhead_angle)
+            arrowhead1_y = end_pos[1] - arrowhead_length * math.sin(angle - arrowhead_angle)
+            arrowhead2_x = end_pos[0] - arrowhead_length * math.cos(angle + arrowhead_angle)
+            arrowhead2_y = end_pos[1] - arrowhead_length * math.sin(angle + arrowhead_angle)
+
+            # Draw arrowhead lines
+            pygame.draw.line(self.screen, color, end_pos, (arrowhead1_x, arrowhead1_y), 3)
+            pygame.draw.line(self.screen, color, end_pos, (arrowhead2_x, arrowhead2_y), 3)
+
+        # Draw velocity magnitude text
+        velocity_magnitude = length * velocity_scale
+        font = pygame.font.Font(None, 24)
+        speed_text = f"{velocity_magnitude:.1f} km/s"
+        text_surface = font.render(speed_text, True, color)
+
+        # Position text near the middle of the arrow
+        text_x = (start_pos[0] + end_pos[0]) // 2
+        text_y = (start_pos[1] + end_pos[1]) // 2 - 20  # Offset above the arrow
+
+        # Keep text on screen
+        if text_x + text_surface.get_width() > self.width:
+            text_x = self.width - text_surface.get_width()
+        if text_x < 0:
+            text_x = 0
+        if text_y < 0:
+            text_y = text_y + 40  # Move below arrow if above screen
+
+        self.screen.blit(text_surface, (text_x, text_y))
 
     def present(self) -> None:
         """Present the rendered frame to screen."""
