@@ -24,7 +24,7 @@ try:
         try:
             # Initialize pygame for the menu
             pygame.init()
-            screen = pygame.display.set_mode((1200, 800))
+            screen = pygame.display.set_mode((900, 600))
             pygame.display.set_caption("Solar System Simulation - Startup")
 
             # Show startup menu
