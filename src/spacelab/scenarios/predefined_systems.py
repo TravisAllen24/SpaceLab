@@ -295,8 +295,8 @@ def create_proxima_centauri_system():
         mass_kg=7.6e24,  # About 1.27 Earth masses
         x_position=proxima_b_distance * math.cos(proxima_b_angle),
         y_position=proxima_b_distance * math.sin(proxima_b_angle),
-        x_velocity=-60.0 * math.sin(proxima_b_angle),  # Fast orbit due to close distance
-        y_velocity=60.0 * math.cos(proxima_b_angle),
+        x_velocity=-46.7 * math.sin(proxima_b_angle),  # Fast orbit due to close distance
+        y_velocity=46.7 * math.cos(proxima_b_angle),
         color=(100, 150, 200)  # Blue-ish (potentially habitable)
     )
     bodies.append(proxima_b)
@@ -310,8 +310,8 @@ def create_proxima_centauri_system():
         mass_kg=4.25e25,  # About 7 Earth masses (super-Earth)
         x_position=proxima_c_distance * math.cos(proxima_c_angle),
         y_position=proxima_c_distance * math.sin(proxima_c_angle),
-        x_velocity=-15.0 * math.sin(proxima_c_angle),  # Slower orbit
-        y_velocity=15.0 * math.cos(proxima_c_angle),
+        x_velocity=-27.0 * math.sin(proxima_c_angle),  # Slower orbit
+        y_velocity=27.0 * math.cos(proxima_c_angle),
         color=(150, 100, 80)  # Brown-ish (cold super-Earth)
     )
     bodies.append(proxima_c)
@@ -325,8 +325,8 @@ def create_proxima_centauri_system():
         mass_kg=1.2e24,  # About 0.2 Earth masses
         x_position=proxima_d_distance * math.cos(proxima_d_angle),
         y_position=proxima_d_distance * math.sin(proxima_d_angle),
-        x_velocity=-120.0 * math.sin(proxima_d_angle),  # Very fast orbit
-        y_velocity=120.0 * math.cos(proxima_d_angle),
+        x_velocity=-82.4 * math.sin(proxima_d_angle),  # Very fast orbit
+        y_velocity=82.4 * math.cos(proxima_d_angle),
         color=(200, 100, 100)  # Red-ish (very hot due to proximity)
     )
     bodies.append(proxima_d)
