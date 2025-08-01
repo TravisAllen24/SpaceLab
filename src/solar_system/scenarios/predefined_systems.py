@@ -1,22 +1,38 @@
 """Predefined celestial bodies for different scenarios."""
 
 import math
-from ..bodies.earth import Earth
-from ..bodies.moon import Moon
 from ..bodies.satellite import Satellite
-from ..bodies.custom_body import CustomBody
+from ..bodies.celestial_body import CelestialBody
 
 
 def create_earth_moon_system():
     """Create the Earth-Moon system with ISS."""
     bodies = []
 
-    # Earth at center
-    earth = Earth()
+    # Earth
+    earth = CelestialBody(
+        name = "Earth",
+        radius_km = 6371.0,
+        mass_kg = 5.972e24,
+        x_position = 0.0,
+        y_position = 0.0,
+        x_velocity = 0.0,
+        y_velocity = 0.0,
+        color = (0, 100, 255)  # Blue color for Earth
+    )
     bodies.append(earth)
 
     # Moon orbiting Earth
-    moon = Moon()
+    moon = CelestialBody(
+        name = "Moon",
+        radius_km = 1737.4,
+        mass_kg = 7.34767309e22,
+        x_position = 384400.0,
+        y_position = 0.0,
+        x_velocity = 0.0,
+        y_velocity = 1.022,
+        color = (200, 200, 200)
+    )
     bodies.append(moon)
 
     # ISS satellite
@@ -40,7 +56,7 @@ def create_solar_system():
     bodies = []
 
     # Sun at center
-    sun = CustomBody(
+    sun = CelestialBody(
         name="Sun",
         radius_km=696340,  # Actual sun radius
         mass_kg=1.989e30,  # Actual sun mass
@@ -55,7 +71,7 @@ def create_solar_system():
     # Mercury - at 45 degrees
     mercury_angle = math.radians(45)
     mercury_distance = 57909050
-    mercury = CustomBody(
+    mercury = CelestialBody(
         name="Mercury",
         radius_km=2439.7,
         mass_kg=3.301e23,
@@ -70,7 +86,7 @@ def create_solar_system():
     # Venus - at 120 degrees
     venus_angle = math.radians(120)
     venus_distance = 108208000
-    venus = CustomBody(
+    venus = CelestialBody(
         name="Venus",
         radius_km=6051.8,
         mass_kg=4.867e24,
@@ -85,7 +101,7 @@ def create_solar_system():
     # Earth - at 200 degrees
     earth_angle = math.radians(200)
     earth_distance = 149597870
-    earth = CustomBody(
+    earth = CelestialBody(
         name="Earth",
         radius_km=6371,
         mass_kg=5.972e24,
@@ -100,7 +116,7 @@ def create_solar_system():
     # Mars - at 300 degrees
     mars_angle = math.radians(300)
     mars_distance = 227943824
-    mars = CustomBody(
+    mars = CelestialBody(
         name="Mars",
         radius_km=3390,
         mass_kg=6.39e23,
@@ -115,7 +131,7 @@ def create_solar_system():
     # Jupiter - at 80 degrees
     jupiter_angle = math.radians(80)
     jupiter_distance = 778299000
-    jupiter = CustomBody(
+    jupiter = CelestialBody(
         name="Jupiter",
         radius_km=69911,
         mass_kg=1.898e27,
@@ -130,7 +146,7 @@ def create_solar_system():
     # Saturn - at 160 degrees
     saturn_angle = math.radians(160)
     saturn_distance = 1429400000
-    saturn = CustomBody(
+    saturn = CelestialBody(
         name="Saturn",
         radius_km=58232,
         mass_kg=5.683e26,
@@ -145,7 +161,7 @@ def create_solar_system():
     # Uranus - at 240 degrees
     uranus_angle = math.radians(240)
     uranus_distance = 2870658186
-    uranus = CustomBody(
+    uranus = CelestialBody(
         name="Uranus",
         radius_km=25362,
         mass_kg=8.681e25,
@@ -160,7 +176,7 @@ def create_solar_system():
     # Neptune - at 30 degrees
     neptune_angle = math.radians(30)
     neptune_distance = 4498396441
-    neptune = CustomBody(
+    neptune = CelestialBody(
         name="Neptune",
         radius_km=24622,
         mass_kg=1.024e26,
@@ -180,7 +196,7 @@ def create_jupiter_system():
     bodies = []
 
     # Jupiter at center
-    jupiter = CustomBody(
+    jupiter = CelestialBody(
         name="Jupiter",
         radius_km=69911,
         mass_kg=1.898e27,
@@ -195,7 +211,7 @@ def create_jupiter_system():
     # Io - at 90 degrees
     io_angle = math.radians(90)
     io_distance = 421700
-    io = CustomBody(
+    io = CelestialBody(
         name="Io",
         radius_km=1821.6,
         mass_kg=8.93e22,
@@ -210,7 +226,7 @@ def create_jupiter_system():
     # Europa - at 180 degrees
     europa_angle = math.radians(180)
     europa_distance = 671034
-    europa = CustomBody(
+    europa = CelestialBody(
         name="Europa",
         radius_km=1560.8,
         mass_kg=4.8e22,
@@ -225,7 +241,7 @@ def create_jupiter_system():
     # Ganymede - at 270 degrees
     ganymede_angle = math.radians(270)
     ganymede_distance = 1070412
-    ganymede = CustomBody(
+    ganymede = CelestialBody(
         name="Ganymede",
         radius_km=2634.1,
         mass_kg=1.48e23,
@@ -240,7 +256,7 @@ def create_jupiter_system():
     # Callisto - at 45 degrees
     callisto_angle = math.radians(45)
     callisto_distance = 1882709
-    callisto = CustomBody(
+    callisto = CelestialBody(
         name="Callisto",
         radius_km=2410.3,
         mass_kg=1.08e23,
@@ -260,7 +276,7 @@ def create_proxima_centauri_system():
     bodies = []
 
     # Proxima Centauri (red dwarf star)
-    proxima = CustomBody(
+    proxima = CelestialBody(
         name="Proxima Centauri",
         radius_km=100000,  # About 1/7th of Sun's radius
         mass_kg=2.446e29,  # About 0.123 solar masses
@@ -275,7 +291,7 @@ def create_proxima_centauri_system():
     # Proxima Centauri b (potentially habitable exoplanet) - at 45 degrees
     proxima_b_angle = math.radians(45)
     proxima_b_distance = 7500000  # 0.05 AU in km (very close orbit)
-    proxima_b = CustomBody(
+    proxima_b = CelestialBody(
         name="Proxima b",
         radius_km=7160,  # Slightly larger than Earth
         mass_kg=7.6e24,  # About 1.27 Earth masses
@@ -290,7 +306,7 @@ def create_proxima_centauri_system():
     # Proxima Centauri c (larger, outer planet) - at 180 degrees
     proxima_c_angle = math.radians(180)
     proxima_c_distance = 22350000  # 1.49 AU in km
-    proxima_c = CustomBody(
+    proxima_c = CelestialBody(
         name="Proxima c",
         radius_km=10000,  # Estimated larger size
         mass_kg=4.25e25,  # About 7 Earth masses (super-Earth)
@@ -305,7 +321,7 @@ def create_proxima_centauri_system():
     # Proxima Centauri d (recently discovered, very close) - at 270 degrees
     proxima_d_angle = math.radians(270)
     proxima_d_distance = 2400000  # 0.016 AU in km (extremely close)
-    proxima_d = CustomBody(
+    proxima_d = CelestialBody(
         name="Proxima d",
         radius_km=3500,  # About half Earth's size
         mass_kg=1.2e24,  # About 0.2 Earth masses

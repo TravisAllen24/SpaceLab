@@ -4,9 +4,7 @@ import math
 from typing import List, Tuple, Optional
 from ..bodies.celestial_body import CelestialBody
 from ..bodies.satellite import Satellite
-from ..bodies.earth import Earth
-from ..bodies.moon import Moon
-from ..bodies.custom_body import CustomBody
+from ..bodies.celestial_body import CelestialBody
 from ..bodies.impact_marker import ImpactMarker
 
 

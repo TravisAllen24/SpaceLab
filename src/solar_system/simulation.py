@@ -7,10 +7,8 @@ from .graphics.renderer import Renderer
 from .physics.gravity import apply_gravitational_forces
 from .physics.collision import detect_collisions, create_impact_marker
 from .bodies.celestial_body import CelestialBody
-from .bodies.earth import Earth
-from .bodies.moon import Moon
 from .bodies.satellite import Satellite
-from .bodies.custom_body import CustomBody
+from .bodies.celestial_body import CelestialBody
 from .bodies.impact_marker import ImpactMarker
 from .graphics.input_dialog import get_text_input
 from .scenarios.predefined_systems import (

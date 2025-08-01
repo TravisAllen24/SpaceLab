@@ -1,11 +1,10 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Tuple
 import math
 
 
 @dataclass
-class CelestialBody(ABC):
+class CelestialBody():
     """Base class for all celestial bodies in the solar system simulation."""
     name: str
     radius_km: float
@@ -40,7 +39,7 @@ class CelestialBody(ABC):
         dy = self.y_position - other.y_position
         return math.sqrt(dx**2 + dy**2)
 
-    @abstractmethod
     def update(self, dt: float) -> None:
-        """Update the celestial body's state. Must be implemented by subclasses."""
-        pass
+        """Update CustomBody's position based on its velocity."""
+        self.x_position += self.x_velocity * dt
+        self.y_position += self.y_velocity * dt
