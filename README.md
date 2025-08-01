@@ -62,7 +62,7 @@ poetry install
 
 ## Usage
 
-### Quick Start with Poetry
+### Run main.py
 ```bash
 # Direct module execution
 python -m src.spacelab.main
