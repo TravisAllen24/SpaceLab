@@ -4,6 +4,7 @@ import pygame
 import random
 from typing import List, Tuple
 from ..bodies.celestial_body import CelestialBody
+from ..config import settings
 from ..config.settings import *
 
 
@@ -165,11 +166,11 @@ class Renderer:
         pygame.draw.circle(self.screen, (255, 255, 255), screen_pos, radius, 1)
 
         # Draw label if enabled
-        if SHOW_LABELS:
+        if settings.SHOW_LABELS:
             self._draw_body_label(body, screen_pos, radius)
 
         # Update trail
-        if SHOW_TRAILS:
+        if settings.SHOW_TRAILS:
             self._update_trail(body, screen_pos)
 
     def _draw_body_label(self, body: CelestialBody, screen_pos: Tuple[int, int], radius: int) -> None:

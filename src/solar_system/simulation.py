@@ -18,6 +18,7 @@ from .scenarios.predefined_systems import (
     create_proxima_centauri_system,
     create_empty_system
 )
+from .config import settings
 from .config.settings import *
 
 
@@ -228,12 +229,12 @@ class SolarSystemSimulation:
                     # Note: _setup_bodies() already resets total_satellites_created to 1
                 elif event.key == pygame.K_l:
                     # Toggle labels
-                    import solar_system.config.settings as settings
                     settings.SHOW_LABELS = not settings.SHOW_LABELS
+                    print(f"Labels {'enabled' if settings.SHOW_LABELS else 'disabled'}")
                 elif event.key == pygame.K_t:
                     # Toggle trails
-                    import solar_system.config.settings as settings
                     settings.SHOW_TRAILS = not settings.SHOW_TRAILS
+                    print(f"Trails {'enabled' if settings.SHOW_TRAILS else 'disabled'}")
                 elif event.key == pygame.K_c:
                     # Clear trails and impact markers
                     self.renderer.trails.clear()
