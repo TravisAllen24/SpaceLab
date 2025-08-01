@@ -13,11 +13,13 @@ class Renderer:
     def __init__(self, width: int = WINDOW_WIDTH, height: int = WINDOW_HEIGHT):
         """Initialize the renderer with pygame."""
         pygame.init()
-        self.screen = pygame.display.set_mode((width, height))
+        self.screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
         pygame.display.set_caption(WINDOW_TITLE)
         self.clock = pygame.time.Clock()
         self.width = width
         self.height = height
+        self.is_fullscreen = False
+        self.windowed_size = (width, height)  # Store original windowed size
 
         # Trail system
         self.trails = {}  # Dictionary to store trails for each body
@@ -29,7 +31,7 @@ class Renderer:
         self.stars = self._generate_stars()
 
     def _generate_stars(self) -> List[Tuple[int, int, Tuple[int, int, int], int]]:
-        """Generate random stars for the background."""
+        """Generate random stars for the background based on current screen size."""
         stars = []
         num_stars = STAR_COUNT
 
@@ -61,14 +63,18 @@ class Renderer:
 
     def world_to_screen(self, x_km: float, y_km: float) -> Tuple[int, int]:
         """Convert world coordinates (km) to screen coordinates (pixels)."""
-        screen_x = int(CENTER_X + x_km * SCALE_FACTOR * self.zoom)
-        screen_y = int(CENTER_Y - y_km * SCALE_FACTOR * self.zoom)  # Flip Y axis
+        center_x = self.width // 2
+        center_y = self.height // 2
+        screen_x = int(center_x + x_km * SCALE_FACTOR * self.zoom)
+        screen_y = int(center_y - y_km * SCALE_FACTOR * self.zoom)  # Flip Y axis
         return (screen_x, screen_y)
 
     def screen_to_world(self, screen_x: int, screen_y: int) -> Tuple[float, float]:
         """Convert screen coordinates (pixels) to world coordinates (km)."""
-        world_x = (screen_x - CENTER_X) / (SCALE_FACTOR * self.zoom)
-        world_y = (CENTER_Y - screen_y) / (SCALE_FACTOR * self.zoom)  # Flip Y axis back
+        center_x = self.width // 2
+        center_y = self.height // 2
+        world_x = (screen_x - center_x) / (SCALE_FACTOR * self.zoom)
+        world_y = (center_y - screen_y) / (SCALE_FACTOR * self.zoom)  # Flip Y axis back
         return (world_x, world_y)
 
     def calculate_render_radius(self, body: CelestialBody) -> int:
@@ -78,17 +84,17 @@ class Renderer:
         return min(scaled_radius, 50)  # Cap at 50 pixels for very large bodies
 
     def zoom_in(self) -> None:
-        """Zoom in by the zoom speed."""
+        """Zoom in by multiplying zoom level."""
         old_zoom = self.zoom
-        self.zoom = min(self.zoom + ZOOM_SPEED, MAX_ZOOM)
+        self.zoom = min(self.zoom * 1.2, MAX_ZOOM)  # 20% increase each step
         # Clear trails when zoom changes to prevent distortion
         if self.zoom != old_zoom:
             self.trails.clear()
 
     def zoom_out(self) -> None:
-        """Zoom out by the zoom speed."""
+        """Zoom out by dividing zoom level."""
         old_zoom = self.zoom
-        self.zoom = max(self.zoom - ZOOM_SPEED, MIN_ZOOM)
+        self.zoom = max(self.zoom / 1.2, MIN_ZOOM)  # 20% decrease each step
         # Clear trails when zoom changes to prevent distortion
         if self.zoom != old_zoom:
             self.trails.clear()
@@ -100,6 +106,52 @@ class Renderer:
                 self.zoom_in()
             elif event.y < 0:  # Scroll down
                 self.zoom_out()
+
+    def toggle_fullscreen(self) -> None:
+        """Toggle between fullscreen and windowed mode."""
+        if self.is_fullscreen:
+            # Switch to windowed mode
+            self.screen = pygame.display.set_mode(self.windowed_size)
+            self.width, self.height = self.windowed_size
+            self.is_fullscreen = False
+            print("Switched to windowed mode")
+        else:
+            # Switch to fullscreen mode
+            # Get current display info
+            info = pygame.display.Info()
+            fullscreen_size = (info.current_w, info.current_h)
+            self.screen = pygame.display.set_mode(fullscreen_size, pygame.FULLSCREEN)
+            self.width, self.height = fullscreen_size
+            self.is_fullscreen = True
+            print(f"Switched to fullscreen mode ({self.width}x{self.height})")
+
+        # Regenerate stars for new screen size
+        self.stars = self._generate_stars()
+        # Clear trails to prevent distortion
+        self.trails.clear()
+
+    def handle_resize(self, new_width: int, new_height: int) -> None:
+        """Handle window resize events (including maximize button)."""
+        if not self.is_fullscreen:
+            # Update windowed size if not in fullscreen
+            self.windowed_size = (new_width, new_height)
+
+        # Update screen dimensions
+        self.width = new_width
+        self.height = new_height
+
+        # Recreate the display surface with new size
+        if self.is_fullscreen:
+            self.screen = pygame.display.set_mode((new_width, new_height), pygame.FULLSCREEN)
+        else:
+            self.screen = pygame.display.set_mode((new_width, new_height), pygame.RESIZABLE)
+
+        # Regenerate stars for new screen size
+        self.stars = self._generate_stars()
+        # Clear trails to prevent distortion
+        self.trails.clear()
+
+        print(f"Window resized to {new_width}x{new_height}")
 
     def draw_body(self, body: CelestialBody) -> None:
         """Draw a single celestial body with label."""

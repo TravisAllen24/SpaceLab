@@ -17,7 +17,7 @@ CENTER_Y = WINDOW_HEIGHT // 2
 
 # Zoom settings
 ZOOM_FACTOR = 1.0  # Current zoom level
-MIN_ZOOM = 0.1  # Minimum zoom (zoomed out)
+MIN_ZOOM = 0.00001  # Minimum zoom (extremely zoomed out for solar system)
 MAX_ZOOM = 10.0  # Maximum zoom (zoomed in)
 ZOOM_SPEED = 0.1  # How much zoom changes per scroll
 

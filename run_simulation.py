@@ -12,7 +12,9 @@ src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')
 sys.path.insert(0, src_path)
 
 try:
+    import pygame
     from solar_system.simulation import SolarSystemSimulation
+    from solar_system.graphics.startup_menu import show_startup_menu
 
     def main():
         """Main entry point for the Solar System simulation."""
@@ -21,8 +23,23 @@ try:
         print()
 
         try:
-            simulation = SolarSystemSimulation()
+            # Initialize pygame for the menu
+            pygame.init()
+            screen = pygame.display.set_mode((1200, 800))
+            pygame.display.set_caption("Solar System Simulation - Startup")
+
+            # Show startup menu
+            selected_scenario = show_startup_menu(screen)
+
+            if selected_scenario == "quit" or selected_scenario is None:
+                print("Exiting...")
+                pygame.quit()
+                return
+
+            # Create and run simulation with selected scenario
+            simulation = SolarSystemSimulation(selected_scenario)
             simulation.run()
+
         except ImportError as e:
             print(f"Import Error: {e}")
             print("Please install pygame with one of the following commands:")
