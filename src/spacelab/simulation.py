@@ -16,7 +16,10 @@ from .scenarios.predefined_systems import (
     create_solar_system,
     create_jupiter_system,
     create_proxima_centauri_system,
-    create_empty_system
+    create_empty_system,
+    # Import predefined bodies
+    earth, moon, iss, sun, mercury, venus, mars, jupiter, saturn, uranus, neptune,
+    jupiter_center, io, europa, ganymede, callisto, proxima, proxima_b, proxima_c, proxima_d
 )
 from .config import settings
 from .config.settings import *
@@ -148,13 +151,58 @@ class SolarSystemSimulation:
             if name is None:  # User cancelled
                 return
 
-            # Get mass (in kg)
+            # Check if the name matches a predefined body
+            predefined_bodies = {
+                "earth": earth,
+                "moon": moon,
+                "iss": iss,
+                "sun": sun,
+                "mercury": mercury,
+                "venus": venus,
+                "mars": mars,
+                "jupiter": jupiter,
+                "saturn": saturn,
+                "uranus": uranus,
+                "neptune": neptune,
+                "io": io,
+                "europa": europa,
+                "ganymede": ganymede,
+                "callisto": callisto,
+                "proxima": proxima,
+                "proxima b": proxima_b,
+                "proxima c": proxima_c,
+                "proxima d": proxima_d
+            }
+
+            if name.lower() in predefined_bodies:
+                # Use predefined body but with drag position and velocity
+                template_body = predefined_bodies[name.lower()]
+                new_body = CelestialBody(
+                    name=template_body.name,
+                    radius_km=template_body.radius_km,
+                    mass_kg=template_body.mass_kg,
+                    x_position=world_x,
+                    y_position=world_y,
+                    x_velocity=velocity_x,
+                    y_velocity=velocity_y,
+                    color=template_body.color
+                )
+                self.bodies.append(new_body)
+
+                # Calculate speed for display
+                speed = (velocity_x**2 + velocity_y**2)**0.5
+                print(f"Created predefined body {new_body.name} at ({world_x:.1f}, {world_y:.1f}) km")
+                print(f"  Mass: {new_body.mass_kg:.2e} kg, Radius: {new_body.radius_km:.1f} km")
+                print(f"  Velocity: ({velocity_x:.2f}, {velocity_y:.2f}) km/s (speed: {speed:.2f} km/s)")
+                return
+
+            # Get mass (in kg) for custom body
             mass_str = get_text_input(self.renderer.screen, "Body Properties", "Mass (kg):", "1e20")
             if mass_str is None:
                 return
             mass_kg = float(mass_str)
 
-            # Get radius (in km)
+            # Get radius (in km) for custom body
             radius_str = get_text_input(self.renderer.screen, "Body Properties", "Radius (km):", "100")
             if radius_str is None:
                 return

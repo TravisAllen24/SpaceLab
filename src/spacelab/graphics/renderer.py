@@ -80,9 +80,9 @@ class Renderer:
 
     def calculate_render_radius(self, body: CelestialBody) -> int:
         """Calculate the radius for rendering a celestial body."""
-        # Scale the radius with zoom, but ensure it's visible
+        # Scale the radius with zoom - no cap, allowing true size when zoomed in
         scaled_radius = max(int(body.radius_km * SCALE_FACTOR * self.zoom), MIN_RENDER_RADIUS)
-        return min(scaled_radius, 50)  # Cap at 50 pixels for very large bodies
+        return scaled_radius
 
     def zoom_in(self) -> None:
         """Zoom in by multiplying zoom level."""
@@ -206,10 +206,12 @@ class Renderer:
 
     def _update_trail(self, body: CelestialBody, screen_pos: Tuple[int, int]) -> None:
         """Update the trail for a celestial body."""
-        if body.name not in self.trails:
-            self.trails[body.name] = []
+        # Use object ID instead of name to ensure uniqueness for each body instance
+        body_id = id(body)
+        if body_id not in self.trails:
+            self.trails[body_id] = []
 
-        trail = self.trails[body.name]
+        trail = self.trails[body_id]
         trail.append(screen_pos)
 
         # Limit trail length (0 means unlimited)
