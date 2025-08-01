@@ -62,8 +62,12 @@ poetry install
 
 ## Usage
 
-### Run main.py
+
+### Console commands
 ```bash
+# Running with run_simulation.py
+python run_simulation.py
+
 # Direct module execution
 python -m src.spacelab.main
 
