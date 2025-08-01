@@ -19,7 +19,6 @@ try:
     def main():
         """Main entry point for the Solar System simulation."""
         print("Initializing Solar System Simulation...")
-        print("Make sure you have pygame installed: poetry install")
         print()
 
         try:

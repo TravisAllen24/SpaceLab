@@ -314,7 +314,7 @@ class SolarSystemSimulation:
                 # Handle window resize (maximize button, etc.)
                 self.renderer.handle_resize(event.w, event.h)
 
-    def update_physics(self, dt: float) -> None:
+    def update_physics_single_step(self, dt: float) -> None:
         """Update the physics simulation."""
         if not self.paused:
             # Apply gravitational forces
@@ -325,6 +325,38 @@ class SolarSystemSimulation:
                 body.update(dt)
 
             # Check for collisions
+            collisions = detect_collisions(self.bodies)
+            for colliding_body, target_body in collisions:
+                # Create impact marker at collision point
+                impact_marker = create_impact_marker(colliding_body, target_body)
+                self.impact_markers.append(impact_marker)
+
+                # Remove the colliding body
+                if colliding_body in self.bodies:
+                    self.bodies.remove(colliding_body)
+                    print(f"{colliding_body.name} crashed into {target_body.name}!")
+
+    def update_physics_multi_step(self, total_dt: float, base_dt: float) -> None:
+        """Update physics using multiple smaller steps for better stability."""
+        if not self.paused:
+            # Calculate how many steps we need, but cap it to prevent excessive lag
+            max_steps_per_frame = settings.MAX_PHYSICS_STEPS_PER_FRAME
+            num_steps = max(1, min(int(total_dt / base_dt), max_steps_per_frame))
+            actual_dt = total_dt / num_steps
+
+            # Run multiple physics steps
+            for _ in range(num_steps):
+                # Apply gravitational forces
+                apply_gravitational_forces(self.bodies, actual_dt)
+
+                # Update all bodies
+                for body in self.bodies:
+                    body.update(actual_dt)
+
+                # Check for collisions (only need to check once per frame, not every substep)
+                # We'll do this after all substeps are complete
+
+            # Check for collisions after all physics steps
             collisions = detect_collisions(self.bodies)
             for colliding_body, target_body in collisions:
                 # Create impact marker at collision point
@@ -441,6 +473,9 @@ class SolarSystemSimulation:
         }
 
         print(f"Starting Solar System Simulation: {scenario_descriptions.get(self.scenario, 'Unknown Scenario')}")
+        print(f"Physics Integration Method: {settings.PHYSICS_INTEGRATION_METHOD}")
+        if settings.PHYSICS_INTEGRATION_METHOD == "multi_step":
+            print(f"Max Physics Steps Per Frame: {settings.MAX_PHYSICS_STEPS_PER_FRAME}")
         print("Controls:")
         print("  SPACE: Pause/Resume")
         print("  R: Reset simulation")
@@ -457,7 +492,21 @@ class SolarSystemSimulation:
 
         while self.running:
             self.handle_events()
-            self.update_physics(PHYSICS_DT * self.time_scale)
+
+            # Choose physics integration method based on settings
+            if settings.PHYSICS_INTEGRATION_METHOD == "multi_step":
+                # Use multiple smaller steps for better stability at high time scales
+                total_dt = PHYSICS_DT * self.time_scale
+                self.update_physics_multi_step(total_dt, PHYSICS_DT)
+            elif settings.PHYSICS_INTEGRATION_METHOD == "single_step":
+                # Use single large step (faster but less stable at high time scales)
+                self.update_physics_single_step(PHYSICS_DT * self.time_scale)
+            elif settings.PHYSICS_INTEGRATION_METHOD == "patched_conic":
+                raise NotImplementedError("Patched conic integration not implemented yet")
+            else:
+                print(f"Unknown physics integration method: {settings.PHYSICS_INTEGRATION_METHOD}")
+                sys.exit(1)
+
             self.render()
 
         self.renderer.quit()

@@ -10,6 +10,15 @@ FPS = 60
 TIME_SCALE = 10.0  # Speed up simulation (10x real time)
 PHYSICS_DT = 1.0  # Physics time step in seconds
 
+# Physics Integration Method
+# Choose between two integration methods:
+# "single_step" - Fast, uses large time steps (can be unstable at high time warps)
+# "multi_step" - Stable, uses multiple small time steps (better for high time warps)
+# "patched_conic" - Uses a simple patched conic approximation for orbits
+# Note: "patched_conic" is not yet implemented, so it will raise NotImplemented
+PHYSICS_INTEGRATION_METHOD = "multi_step"  # Options: "single_step" or "multi_step"
+MAX_PHYSICS_STEPS_PER_FRAME = 100  # Maximum physics steps per frame (for multi_step method)
+
 # Rendering settings
 SCALE_FACTOR = .001  # Scale factor for converting km to pixels
 CENTER_X = WINDOW_WIDTH // 2

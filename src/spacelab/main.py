@@ -9,7 +9,6 @@ def main():
     """Main entry point for the application."""
     try:
         print("Initializing Solar System Simulation...")
-        print("Make sure you have pygame installed: poetry install")
         print()
 
         # Initialize pygame for the menu
