@@ -2,6 +2,7 @@
 
 import pygame
 import random
+import os
 from typing import List, Tuple
 from ..bodies.celestial_body import CelestialBody
 from ..config import settings
@@ -21,6 +22,9 @@ class Renderer:
         self.height = height
         self.is_fullscreen = False
         self.windowed_size = (width, height)  # Store original windowed size
+
+        # Load custom fonts
+        self._load_custom_fonts()
 
         # Trail system
         self.trails = {}  # Dictionary to store trails for each body
@@ -56,6 +60,47 @@ class Renderer:
             stars.append((x, y, color, size))
 
         return stars
+
+    def _load_custom_fonts(self) -> None:
+        """Load custom fonts from the fonts directory."""
+        # Get the path to the fonts directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        fonts_dir = os.path.join(current_dir, "fonts")
+
+        # Initialize font dictionaries
+        self.custom_fonts = {}
+        self.fallback_font = None
+
+        try:
+            # Look for Red Alert font files
+            red_alert_inet_path = os.path.join(fonts_dir, "C&C Red Alert [INET].ttf")
+            red_alert_lan_path = os.path.join(fonts_dir, "C&C Red Alert [LAN].ttf")
+
+            # Load the INET version as primary, LAN as backup
+            if os.path.exists(red_alert_inet_path):
+                self.custom_fonts['red_alert_small'] = pygame.font.Font(red_alert_inet_path, 18)
+                self.custom_fonts['red_alert_medium'] = pygame.font.Font(red_alert_inet_path, 24)
+                self.custom_fonts['red_alert_large'] = pygame.font.Font(red_alert_inet_path, 32)
+                self.custom_fonts['red_alert_title'] = pygame.font.Font(red_alert_inet_path, 48)
+                print(f"Loaded custom font: C&C Red Alert [INET]")
+            elif os.path.exists(red_alert_lan_path):
+                self.custom_fonts['red_alert_small'] = pygame.font.Font(red_alert_lan_path, 18)
+                self.custom_fonts['red_alert_medium'] = pygame.font.Font(red_alert_lan_path, 24)
+                self.custom_fonts['red_alert_large'] = pygame.font.Font(red_alert_lan_path, 32)
+                self.custom_fonts['red_alert_title'] = pygame.font.Font(red_alert_lan_path, 48)
+                print(f"Loaded custom font: C&C Red Alert [LAN]")
+            else:
+                print("Custom Red Alert font files not found, using system fonts")
+
+        except Exception as e:
+            print(f"Error loading custom fonts: {e}")
+
+        # Set up fallback font (system default)
+        self.fallback_font = pygame.font.Font(None, 20)
+
+    def get_font(self, font_name: str = 'red_alert_medium') -> pygame.font.Font:
+        """Get a font by name, falling back to system font if not available."""
+        return self.custom_fonts.get(font_name, self.fallback_font)
 
     def draw_starfield(self) -> None:
         """Draw the starry background."""
@@ -175,7 +220,7 @@ class Renderer:
 
     def _draw_body_label(self, body: CelestialBody, screen_pos: Tuple[int, int], radius: int) -> None:
         """Draw a label next to the celestial body."""
-        font = pygame.font.Font(None, LABEL_FONT_SIZE)
+        font = self.get_font('red_alert_small')
         text_surface = font.render(body.name, True, LABEL_COLOR)
 
         # Position label to the right and slightly above the body
@@ -224,7 +269,7 @@ class Renderer:
 
     def draw_info(self, bodies: List[CelestialBody]) -> None:
         """Draw information text on screen."""
-        font = pygame.font.Font(None, 24)
+        font = self.get_font('red_alert_small')
         y_offset = 10
 
         for body in bodies:
@@ -295,7 +340,7 @@ class Renderer:
 
         # Draw velocity magnitude text
         velocity_magnitude = length * velocity_scale
-        font = pygame.font.Font(None, 24)
+        font = self.get_font('red_alert_small')
         speed_text = f"{velocity_magnitude:.1f} km/s"
         text_surface = font.render(speed_text, True, color)
 

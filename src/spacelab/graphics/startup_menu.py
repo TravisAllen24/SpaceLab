@@ -10,9 +10,9 @@ class StartupMenu:
 
     def __init__(self, screen):
         self.screen = screen
-        self.font_large = pygame.font.Font(None, 36)  # Smaller fonts
-        self.font_medium = pygame.font.Font(None, 24)
-        self.font_small = pygame.font.Font(None, 18)
+
+        # Load custom fonts
+        self._load_custom_fonts()
 
         # Load background image
         self.background_image = None
@@ -69,6 +69,42 @@ class StartupMenu:
         self.menu_x = (screen.get_width() - self.menu_width) // 2
         self.menu_y = (screen.get_height() - self.menu_height) // 2
 
+    def _load_custom_fonts(self) -> None:
+        """Load custom fonts from the fonts directory."""
+        # Get the path to the fonts directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        fonts_dir = os.path.join(current_dir, "fonts")
+
+        try:
+            # Look for Red Alert font files
+            red_alert_inet_path = os.path.join(fonts_dir, "C&C Red Alert [INET].ttf")
+            red_alert_lan_path = os.path.join(fonts_dir, "C&C Red Alert [LAN].ttf")
+
+            # Load the INET version as primary, LAN as backup
+            if os.path.exists(red_alert_inet_path):
+                self.font_large = pygame.font.Font(red_alert_inet_path, 32)
+                self.font_medium = pygame.font.Font(red_alert_inet_path, 24)
+                self.font_small = pygame.font.Font(red_alert_inet_path, 16)
+                print(f"Loaded custom fonts for menu: C&C Red Alert [INET]")
+            elif os.path.exists(red_alert_lan_path):
+                self.font_large = pygame.font.Font(red_alert_lan_path, 32)
+                self.font_medium = pygame.font.Font(red_alert_lan_path, 24)
+                self.font_small = pygame.font.Font(red_alert_lan_path, 16)
+                print(f"Loaded custom fonts for menu: C&C Red Alert [LAN]")
+            else:
+                # Fallback to system fonts
+                self.font_large = pygame.font.Font(None, 32)
+                self.font_medium = pygame.font.Font(None, 24)
+                self.font_small = pygame.font.Font(None, 16)
+                print("Using system fonts for menu")
+
+        except Exception as e:
+            print(f"Error loading custom fonts for menu: {e}")
+            # Fallback to system fonts
+            self.font_large = pygame.font.Font(None, 32)
+            self.font_medium = pygame.font.Font(None, 24)
+            self.font_small = pygame.font.Font(None, 16)
+
     def handle_event(self, event) -> Optional[str]:
         """Handle menu events. Returns selected scenario key or None."""
         if event.type == pygame.KEYDOWN:
@@ -122,24 +158,24 @@ class StartupMenu:
             # Draw option name
             name_surface = self.font_medium.render(option["name"], True, color)
             name_x = self.menu_x + (self.menu_width - name_surface.get_width()) // 2
-            y_pos = start_y + i * 35  # Even more compact spacing
+            y_pos = start_y + i * 45  # Even more compact spacing
             self.screen.blit(name_surface, (name_x, y_pos))
 
             # Draw description (smaller font)
             desc_surface = self.font_small.render(option["description"], True, self.description_color)
             desc_x = self.menu_x + (self.menu_width - desc_surface.get_width()) // 2
-            self.screen.blit(desc_surface, (desc_x, y_pos + 16))  # Closer description
+            self.screen.blit(desc_surface, (desc_x, y_pos + 20))  # Closer description
 
             # Draw selection indicator
             if i == self.selected_option:
-                indicator = "►"
+                indicator = ">"
                 indicator_surface = self.font_medium.render(indicator, True, self.selected_color)
                 indicator_x = name_x - 25  # Closer to text
                 self.screen.blit(indicator_surface, (indicator_x, y_pos))
 
         # Draw instructions at bottom of menu
         instructions = [
-            "↑/↓: Navigate  ENTER: Select  ESC: Quit"
+            "upArrow/downArrow: Navigate    ENTER: Select    ESC: Quit"
         ]
 
         inst_y = self.menu_y + self.menu_height - 30

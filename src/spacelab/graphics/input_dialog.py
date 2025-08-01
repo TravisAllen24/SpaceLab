@@ -1,6 +1,7 @@
 """Simple input dialog for pygame applications."""
 
 import pygame
+import os
 from typing import Optional, Tuple
 
 
@@ -12,7 +13,7 @@ class InputDialog:
         self.title = title
         self.prompt = prompt
         self.input_text = default_value
-        self.font = pygame.font.Font(None, 24)
+        self.font = self._load_custom_font()
         self.active = True
         self.result = None
 
@@ -28,6 +29,29 @@ class InputDialog:
         self.text_color = (255, 255, 255)
         self.input_bg_color = (30, 30, 30)
         self.input_border_color = (100, 100, 100)
+
+    def _load_custom_font(self) -> pygame.font.Font:
+        """Load custom font, fall back to system font if not available."""
+        try:
+            # Get the path to the fonts directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            fonts_dir = os.path.join(current_dir, "fonts")
+
+            # Look for Red Alert font files
+            red_alert_inet_path = os.path.join(fonts_dir, "C&C Red Alert [INET].ttf")
+            red_alert_lan_path = os.path.join(fonts_dir, "C&C Red Alert [LAN].ttf")
+
+            # Load the INET version as primary, LAN as backup
+            if os.path.exists(red_alert_inet_path):
+                return pygame.font.Font(red_alert_inet_path, 24)
+            elif os.path.exists(red_alert_lan_path):
+                return pygame.font.Font(red_alert_lan_path, 24)
+            else:
+                return pygame.font.Font(None, 24)
+
+        except Exception:
+            # Fallback to system font
+            return pygame.font.Font(None, 24)
 
     def handle_event(self, event) -> bool:
         """Handle pygame events. Returns True if dialog should continue."""

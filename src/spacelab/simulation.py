@@ -414,7 +414,7 @@ class SolarSystemSimulation:
 
     def _draw_instructions(self) -> None:
         """Draw control instructions on screen."""
-        font = pygame.font.Font(None, 20)
+        font = self.renderer.get_font('red_alert_small')
         instructions = [
             "SPACE: Pause/Resume",
             "R: Reset simulation",
@@ -440,7 +440,7 @@ class SolarSystemSimulation:
 
     def _draw_zoom_info(self) -> None:
         """Draw current zoom level."""
-        font = pygame.font.Font(None, 24)
+        font = self.renderer.get_font('red_alert_small')
         zoom_text = f"Zoom: {self.renderer.zoom:.1f}x"
         text_surface = font.render(zoom_text, True, (255, 255, 255))
 
@@ -450,7 +450,7 @@ class SolarSystemSimulation:
 
     def _draw_time_scale_info(self) -> None:
         """Draw current time scale."""
-        font = pygame.font.Font(None, 24)
+        font = self.renderer.get_font('red_alert_small')
         # Format time scale display nicely
         if self.time_scale < 1:
             time_text = f"Time: {self.time_scale:.2f}x"
