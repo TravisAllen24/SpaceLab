@@ -45,7 +45,7 @@ git clone https://github.com/TravisAllen24/SpaceLab.git
 ```
 2. Create a virtual environment
 ```bash
-python -m venv venv
+python -m venv .venv
 ```
 3. Activate the virtual environment
 ```bash
