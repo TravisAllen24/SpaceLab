@@ -45,11 +45,11 @@ def detect_collisions(bodies: List[CelestialBody]) -> List[Tuple[CelestialBody, 
 def should_body_survive_collision(body1: CelestialBody, body2: CelestialBody) -> bool:
     """Determine if body1 should survive a collision with body2."""
     # Earth and Moon are "immovable" - they always survive unless hit by something much larger
-    if isinstance(body1, (Earth, Moon)):
+    if body1.name == 'Earth' or body1.name == 'Moon':
         # Earth/Moon survive unless hit by something 10x more massive
         return body2.mass_kg < body1.mass_kg * 10
 
-    if isinstance(body2, (Earth, Moon)):
+    if body2.name == 'Earth' or body1.name == 'Moon':
         # Earth/Moon survive unless hit by something 10x more massive
         return body1.mass_kg < body2.mass_kg * 10
 

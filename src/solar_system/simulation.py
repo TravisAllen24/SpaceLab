@@ -166,7 +166,7 @@ class SolarSystemSimulation:
             radius_km = float(radius_str)
 
             # Create the custom body
-            new_body = CustomBody(
+            new_body = CelestialBody(
                 name=name,
                 radius_km=radius_km,
                 mass_kg=mass_kg,
