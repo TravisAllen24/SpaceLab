@@ -85,13 +85,10 @@ class SolarSystemSimulation:
 
         new_satellite = Satellite(
             name=f"Satellite-{self.total_satellites_created}",
-            radius_km=0.1,  # Small satellite
-            mass_kg=1000,  # 1 ton satellite
             x_position=x,
             y_position=y,
             x_velocity=0,  # Zero initial velocity as requested
             y_velocity=0,
-            color=(0, 255, 255)  # Cyan to distinguish from ISS
         )
         self.bodies.append(new_satellite)
         print(f"Created {new_satellite.name} at position ({x:.1f}, {y:.1f}) km")
@@ -118,13 +115,10 @@ class SolarSystemSimulation:
 
         new_satellite = Satellite(
             name=f"Satellite-{self.total_satellites_created}",
-            radius_km=0.1,  # Small satellite
-            mass_kg=1000,  # 1 ton satellite
             x_position=world_x,
             y_position=world_y,
             x_velocity=velocity_x,
             y_velocity=velocity_y,
-            color=(0, 255, 255)  # Cyan to distinguish from ISS
         )
         self.bodies.append(new_satellite)
 

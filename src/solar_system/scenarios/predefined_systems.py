@@ -38,8 +38,6 @@ def create_earth_moon_system():
     # ISS satellite
     iss = Satellite(
         name="ISS",
-        radius_km=0.1,
-        mass_kg=420000,
         x_position=6771,  # Earth radius + 400km altitude
         y_position=0,
         x_velocity=0,
