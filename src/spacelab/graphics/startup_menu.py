@@ -103,7 +103,7 @@ class StartupMenu:
         self.screen.blit(menu_surface, (self.menu_x, self.menu_y))
 
         # Draw title (positioned relative to menu)
-        title_text = "Solar System Simulation"
+        title_text = "Space Lab Menu"
         title_surface = self.font_large.render(title_text, True, self.title_color)
         title_x = self.menu_x + (self.menu_width - title_surface.get_width()) // 2
         self.screen.blit(title_surface, (title_x, self.menu_y + 20))

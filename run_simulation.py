@@ -13,8 +13,8 @@ sys.path.insert(0, src_path)
 
 try:
     import pygame
-    from solar_system.simulation import SolarSystemSimulation
-    from solar_system.graphics.startup_menu import show_startup_menu
+    from spacelab.simulation import SolarSystemSimulation
+    from spacelab.graphics.startup_menu import show_startup_menu
 
     def main():
         """Main entry point for the Solar System simulation."""
