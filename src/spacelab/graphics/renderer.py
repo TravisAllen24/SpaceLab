@@ -275,10 +275,14 @@ class Renderer:
         y_offset = 10
 
         for body in bodies:
-            text = f"{body.name}: ({body.x_position:.0f}, {body.y_position:.0f}) km"
-            text_surface = font.render(text, True, (255, 255, 255))
-            self.screen.blit(text_surface, (10, y_offset))
-            y_offset += 30
+            # Format position and velocity in scientific notation for compactness
+            info_text = f"{body.name}: ({body.x_position:.2e}, {body.y_position:.2e}) km, " \
+                         f"({body.x_velocity:.2e}, {body.y_velocity:.2e}) km/s"
+
+            # Draw information
+            info_surface = font.render(info_text, True, (255, 255, 255))
+            self.screen.blit(info_surface, (10, y_offset))
+            y_offset += 20
 
     def clear_screen(self) -> None:
         """Clear the screen with background color and draw stars."""
