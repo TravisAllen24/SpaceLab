@@ -71,6 +71,7 @@ class SolarSystemSimulation:
             "M: Mute/Unmute music",
             "Left-drag: Create custom body",
             "Right-drag: Create satellite",
+            "Shift+drag: Pan camera view",
             "Mouse wheel: Zoom in/out",
             "+/-: Zoom with keyboard",
             ",/.: Time scale slower/faster",
@@ -88,7 +89,10 @@ class SolarSystemSimulation:
         self.body_drag_start_pos = None
         self.body_drag_current_pos = None
 
-        self.velocity_scale_factor = 0.1  # Scale factor for converting pixels to km/s
+        # Camera panning state (Shift + left-click)
+        self.is_panning_camera = False
+        self.camera_pan_start_pos = None
+        self.camera_pan_last_pos = None
 
         # Satellite naming counter (tracks total satellites ever created)
         self.total_satellites_created = 0
@@ -346,6 +350,63 @@ class SolarSystemSimulation:
         if self.settings_manager.get("fullscreen") != self.renderer.is_fullscreen:
             self.renderer.toggle_fullscreen()
 
+    def _calculate_exponential_velocity(self, drag_pixels: float) -> float:
+        """
+        Calculate velocity using exponential scaling for better control.
+
+        Args:
+            drag_pixels: Distance dragged in pixels
+
+        Returns:
+            Velocity in km/s with exponential scaling
+        """
+        import math
+
+        # Minimum drag distance for any velocity (prevents division by zero)
+        min_drag = 5.0
+
+        # If drag is too small, return minimum velocity
+        if abs(drag_pixels) < min_drag:
+            return 0.1 * (drag_pixels / min_drag) if drag_pixels != 0 else 0.0
+
+        # Exponential scaling parameters
+        base_scale = 0.02  # Base multiplier for exponential scaling
+        exponent = 1.5     # Exponential factor (1.5 gives good curve)
+        min_velocity = 0.1 # Minimum meaningful velocity
+
+        # Calculate exponential velocity
+        # For small drags: more precise, smaller velocities
+        # For large drags: exponentially larger velocities
+        sign = 1 if drag_pixels >= 0 else -1
+        abs_drag = abs(drag_pixels)
+
+        # Exponential formula: v = base_scale * (abs_drag ^ exponent) + min_velocity
+        velocity_magnitude = base_scale * (abs_drag ** exponent) + min_velocity
+
+        return sign * velocity_magnitude
+
+    def _get_visual_velocity_scale(self, start_pos, end_pos) -> float:
+        """
+        Calculate velocity scale for visual arrow display using exponential scaling.
+        This calculates what the actual velocity would be for the arrow display.
+        """
+        drag_vector_x = end_pos[0] - start_pos[0]
+        drag_vector_y = end_pos[1] - start_pos[1]
+
+        # Calculate magnitude of drag
+        drag_magnitude = (drag_vector_x**2 + drag_vector_y**2)**0.5
+
+        if drag_magnitude == 0:
+            return 0.0
+
+        # Calculate what the velocity would be with exponential scaling
+        velocity_x = self._calculate_exponential_velocity(drag_vector_x)
+        velocity_y = self._calculate_exponential_velocity(drag_vector_y)
+        velocity_magnitude = (velocity_x**2 + velocity_y**2)**0.5
+
+        # Return the equivalent linear scale for this drag distance
+        return velocity_magnitude / drag_magnitude
+
     def _create_satellite_at_position(self, x: float, y: float) -> None:
         """Create a new satellite at the given world coordinates with zero velocity."""
         # Increment counter for unique naming
@@ -373,10 +434,10 @@ class SolarSystemSimulation:
         drag_vector_x = self.satellite_drag_current_pos[0] - self.satellite_drag_start_pos[0]
         drag_vector_y = self.satellite_drag_current_pos[1] - self.satellite_drag_start_pos[1]
 
-        # Convert drag vector to velocity (km/s)
+        # Convert drag vector to velocity using exponential scaling
         # Note: Y is flipped because screen Y increases downward but world Y increases upward
-        velocity_x = drag_vector_x * self.velocity_scale_factor
-        velocity_y = -drag_vector_y * self.velocity_scale_factor  # Flip Y axis
+        velocity_x = self._calculate_exponential_velocity(drag_vector_x)
+        velocity_y = -self._calculate_exponential_velocity(drag_vector_y)  # Flip Y axis
 
         # Increment counter for unique naming
         self.total_satellites_created += 1
@@ -402,11 +463,11 @@ class SolarSystemSimulation:
         # Convert start position to world coordinates
         world_x, world_y = self.renderer.screen_to_world(*self.body_drag_start_pos)
 
-        # Calculate drag vector for velocity
+        # Calculate drag vector for velocity using exponential scaling
         drag_vector_x = self.body_drag_current_pos[0] - self.body_drag_start_pos[0]
         drag_vector_y = self.body_drag_current_pos[1] - self.body_drag_start_pos[1]
-        velocity_x = drag_vector_x * self.velocity_scale_factor
-        velocity_y = -drag_vector_y * self.velocity_scale_factor
+        velocity_x = self._calculate_exponential_velocity(drag_vector_x)
+        velocity_y = -self._calculate_exponential_velocity(drag_vector_y)
 
         # Get user input for body properties
         try:
@@ -505,21 +566,33 @@ class SolarSystemSimulation:
                 # Handle zoom
                 self.renderer.handle_zoom_event(event)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:  # Left mouse button - custom body
-                    self.is_dragging_body = True
-                    self.body_drag_start_pos = event.pos
-                    self.body_drag_current_pos = event.pos
+                keys = pygame.key.get_pressed()
+                if event.button == 1:  # Left mouse button
+                    if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:  # Shift + left click = camera pan
+                        self.is_panning_camera = True
+                        self.camera_pan_start_pos = event.pos
+                        self.camera_pan_last_pos = event.pos
+                    else:  # Regular left click = custom body
+                        self.is_dragging_body = True
+                        self.body_drag_start_pos = event.pos
+                        self.body_drag_current_pos = event.pos
                 elif event.button == 3:  # Right mouse button - satellite
                     self.is_dragging_satellite = True
                     self.satellite_drag_start_pos = event.pos
                     self.satellite_drag_current_pos = event.pos
             elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1 and self.is_dragging_body:  # Left mouse button release
-                    # End dragging and create custom body with input dialog
-                    self._create_custom_body_from_drag()
-                    self.is_dragging_body = False
-                    self.body_drag_start_pos = None
-                    self.body_drag_current_pos = None
+                if event.button == 1:  # Left mouse button release
+                    if self.is_panning_camera:
+                        # End camera panning
+                        self.is_panning_camera = False
+                        self.camera_pan_start_pos = None
+                        self.camera_pan_last_pos = None
+                    elif self.is_dragging_body:
+                        # End dragging and create custom body with input dialog
+                        self._create_custom_body_from_drag()
+                        self.is_dragging_body = False
+                        self.body_drag_start_pos = None
+                        self.body_drag_current_pos = None
                 elif event.button == 3 and self.is_dragging_satellite:  # Right mouse button release
                     # End dragging and create satellite
                     self._create_satellite_from_drag()
@@ -527,7 +600,15 @@ class SolarSystemSimulation:
                     self.satellite_drag_start_pos = None
                     self.satellite_drag_current_pos = None
             elif event.type == pygame.MOUSEMOTION:
-                if self.is_dragging_satellite:
+                if self.is_panning_camera:
+                    # Calculate camera movement based on mouse delta
+                    if self.camera_pan_last_pos:
+                        delta_x = event.pos[0] - self.camera_pan_last_pos[0]
+                        delta_y = event.pos[1] - self.camera_pan_last_pos[1]
+                        # Move camera in opposite direction of mouse movement
+                        self.renderer.move_camera(-delta_x, -delta_y)
+                    self.camera_pan_last_pos = event.pos
+                elif self.is_dragging_satellite:
                     self.satellite_drag_current_pos = event.pos
                 elif self.is_dragging_body:
                     self.body_drag_current_pos = event.pos
@@ -675,20 +756,22 @@ class SolarSystemSimulation:
 
         # Draw velocity arrows if dragging
         if self.is_dragging_satellite and self.satellite_drag_start_pos and self.satellite_drag_current_pos:
-            # Yellow arrow for satellites
+            # Yellow arrow for satellites with exponential velocity scaling
+            velocity_scale = self._get_visual_velocity_scale(self.satellite_drag_start_pos, self.satellite_drag_current_pos)
             self.renderer.draw_velocity_arrow(
                 self.satellite_drag_start_pos,
                 self.satellite_drag_current_pos,
                 color=(255, 255, 0),  # Yellow
-                velocity_scale=self.velocity_scale_factor
+                velocity_scale=velocity_scale
             )
         elif self.is_dragging_body and self.body_drag_start_pos and self.body_drag_current_pos:
-            # Red arrow for custom bodies
+            # Red arrow for custom bodies with exponential velocity scaling
+            velocity_scale = self._get_visual_velocity_scale(self.body_drag_start_pos, self.body_drag_current_pos)
             self.renderer.draw_velocity_arrow(
                 self.body_drag_start_pos,
                 self.body_drag_current_pos,
                 color=(255, 100, 100),  # Red-ish
-                velocity_scale=self.velocity_scale_factor
+                velocity_scale=velocity_scale
             )
 
         # Draw information

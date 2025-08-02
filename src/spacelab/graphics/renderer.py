@@ -32,6 +32,10 @@ class Renderer:
         # Zoom system
         self.zoom = ZOOM_FACTOR
 
+        # Camera system
+        self.camera_offset_x = 0.0  # Camera offset in world coordinates (km)
+        self.camera_offset_y = 0.0  # Camera offset in world coordinates (km)
+
         # Star field
         self.stars = self._generate_stars()
 
@@ -113,17 +117,31 @@ class Renderer:
         """Convert world coordinates (km) to screen coordinates (pixels)."""
         center_x = self.width // 2
         center_y = self.height // 2
-        screen_x = int(center_x + x_km * SCALE_FACTOR * self.zoom)
-        screen_y = int(center_y - y_km * SCALE_FACTOR * self.zoom)  # Flip Y axis
+        # Apply camera offset
+        adjusted_x = x_km - self.camera_offset_x
+        adjusted_y = y_km - self.camera_offset_y
+        screen_x = int(center_x + adjusted_x * SCALE_FACTOR * self.zoom)
+        screen_y = int(center_y - adjusted_y * SCALE_FACTOR * self.zoom)  # Flip Y axis
         return (screen_x, screen_y)
 
     def screen_to_world(self, screen_x: int, screen_y: int) -> Tuple[float, float]:
         """Convert screen coordinates (pixels) to world coordinates (km)."""
         center_x = self.width // 2
         center_y = self.height // 2
-        world_x = (screen_x - center_x) / (SCALE_FACTOR * self.zoom)
-        world_y = (center_y - screen_y) / (SCALE_FACTOR * self.zoom)  # Flip Y axis back
+        world_x = (screen_x - center_x) / (SCALE_FACTOR * self.zoom) + self.camera_offset_x
+        world_y = (center_y - screen_y) / (SCALE_FACTOR * self.zoom) + self.camera_offset_y  # Flip Y axis back
         return (world_x, world_y)
+
+    def move_camera(self, delta_screen_x: int, delta_screen_y: int) -> None:
+        """Move the camera by screen pixel amounts."""
+        # Convert screen delta to world delta and apply to camera offset
+        delta_world_x = delta_screen_x / (SCALE_FACTOR * self.zoom)
+        delta_world_y = -delta_screen_y / (SCALE_FACTOR * self.zoom)  # Flip Y for world coordinates
+        self.camera_offset_x += delta_world_x
+        self.camera_offset_y += delta_world_y
+
+        # Clear trails when camera moves to prevent distortion
+        self.trails.clear()
 
     def calculate_render_radius(self, body: CelestialBody) -> int:
         """Calculate the radius for rendering a celestial body."""
