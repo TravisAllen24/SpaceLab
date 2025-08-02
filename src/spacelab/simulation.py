@@ -5,6 +5,7 @@ import sys
 from typing import List
 from .graphics.renderer import Renderer
 from .audio.audio_manager import AudioManager
+from .config.settings_manager import SettingsManager
 from .physics.gravity import apply_gravitational_forces
 from .physics.collision import detect_collisions, create_impact_marker
 from .bodies.celestial_body import CelestialBody
@@ -31,6 +32,7 @@ class SolarSystemSimulation:
 
     def __init__(self, scenario: str = "earth_moon"):
         """Initialize the simulation with a specific scenario."""
+        self.settings_manager = SettingsManager()
         self.renderer = Renderer()
         self.audio_manager = AudioManager()
         self.bodies: List[CelestialBody] = []
@@ -39,8 +41,9 @@ class SolarSystemSimulation:
         self.paused = False
         self.scenario = scenario
 
-        # Menu state
+        # Menu state system
         self.menu_open = False
+        self.menu_state = "main"  # "main", "settings", "audio", "graphics", "gameplay"
         self.menu_selection = 0
         self.available_scenarios = ["earth_moon", "solar_system", "jupiter_system", "proxima_centauri", "empty"]
         self.scenario_names = {
@@ -50,6 +53,30 @@ class SolarSystemSimulation:
             "proxima_centauri": "Proxima Centauri System",
             "empty": "Empty Space"
         }
+
+        # Settings menu options
+        self.main_menu_options = ["Select Scenario", "Settings", "Controls", "Resume", "Quit"]
+        self.settings_menu_options = ["Audio", "Graphics", "Gameplay", "Reset to Defaults", "Back"]
+        self.audio_menu_options = ["Music Volume", "Sound Effects Volume", "Audio Enabled", "Back"]
+        self.graphics_menu_options = ["Fullscreen", "Show Labels", "Show Trails", "Show FPS", "Back"]
+        self.gameplay_menu_options = ["Trail Length", "Max Time Scale", "Physics Method", "Back"]
+        self.controls_menu_options = [
+            "SPACE/P: Pause/Resume",
+            "ESC: Open menu",
+            "Q: Quit simulation",
+            "R: Reset simulation",
+            "L: Toggle labels",
+            "T: Toggle trails",
+            "C: Clear trails & impacts",
+            "M: Mute/Unmute music",
+            "Left-drag: Create custom body",
+            "Right-drag: Create satellite",
+            "Mouse wheel: Zoom in/out",
+            "+/-: Zoom with keyboard",
+            ",/.: Time scale slower/faster",
+            "F11: Toggle fullscreen",
+            "Back"
+        ]
 
         # Satellite creation drag state (right-click)
         self.is_dragging_satellite = False
@@ -77,6 +104,9 @@ class SolarSystemSimulation:
 
         # Initialize celestial bodies based on scenario
         self._setup_bodies()
+
+        # Apply all settings from the settings manager
+        self._apply_all_settings()
 
         # Start background music for the scenario
         self.audio_manager.play_scenario_music(self.scenario)
@@ -113,6 +143,208 @@ class SolarSystemSimulation:
         self.real_time_start = pygame.time.get_ticks()
         self.audio_manager.play_scenario_music(self.scenario)
         print(f"Switched to scenario: {self.scenario_names.get(new_scenario, new_scenario)}")
+
+    def _handle_menu_input(self, key) -> None:
+        """Handle input for the menu system."""
+        if key == pygame.K_UP:
+            self._navigate_menu(-1)
+        elif key == pygame.K_DOWN:
+            self._navigate_menu(1)
+        elif key == pygame.K_LEFT:
+            self._adjust_setting(-1)
+        elif key == pygame.K_RIGHT:
+            self._adjust_setting(1)
+        elif key == pygame.K_RETURN:
+            self._select_menu_option()
+        elif key == pygame.K_ESCAPE:
+            self._go_back_menu()
+
+    def _navigate_menu(self, direction: int) -> None:
+        """Navigate up/down in the current menu."""
+        if self.menu_state == "main":
+            options_count = len(self.main_menu_options)
+        elif self.menu_state == "scenario":
+            options_count = len(self.available_scenarios)
+        elif self.menu_state == "settings":
+            options_count = len(self.settings_menu_options)
+        elif self.menu_state == "controls":
+            options_count = len(self.controls_menu_options)
+        elif self.menu_state == "audio":
+            options_count = len(self.audio_menu_options)
+        elif self.menu_state == "graphics":
+            options_count = len(self.graphics_menu_options)
+        elif self.menu_state == "gameplay":
+            options_count = len(self.gameplay_menu_options)
+        else:
+            options_count = 1
+
+        self.menu_selection = (self.menu_selection + direction) % options_count
+
+    def _adjust_setting(self, direction: int) -> None:
+        """Adjust settings with left/right arrows."""
+        if self.menu_state == "audio":
+            option = self.audio_menu_options[self.menu_selection]
+            if option == "Music Volume":
+                current = self.settings_manager.get("music_volume")
+                new_volume = max(0.0, min(1.0, current + direction * 0.1))
+                self.settings_manager.set("music_volume", new_volume)
+                self.audio_manager.set_volume(new_volume)
+            elif option == "Sound Effects Volume":
+                current = self.settings_manager.get("sound_effects_volume")
+                new_volume = max(0.0, min(1.0, current + direction * 0.1))
+                self.settings_manager.set("sound_effects_volume", new_volume)
+            elif option == "Audio Enabled":
+                enabled = self.settings_manager.get("audio_enabled")
+                self.settings_manager.set("audio_enabled", not enabled)
+                if not enabled:
+                    self.audio_manager.toggle_mute()
+
+        elif self.menu_state == "graphics":
+            option = self.graphics_menu_options[self.menu_selection]
+            if option == "Show Labels":
+                current = self.settings_manager.get("show_labels")
+                self.settings_manager.set("show_labels", not current)
+                settings.SHOW_LABELS = not current
+            elif option == "Show Trails":
+                current = self.settings_manager.get("show_trails")
+                self.settings_manager.set("show_trails", not current)
+                settings.SHOW_TRAILS = not current
+            elif option == "Show FPS":
+                current = self.settings_manager.get("show_fps")
+                self.settings_manager.set("show_fps", not current)
+            elif option == "Fullscreen":
+                self.renderer.toggle_fullscreen()
+                self.settings_manager.set("fullscreen", self.renderer.is_fullscreen)
+
+        elif self.menu_state == "gameplay":
+            option = self.gameplay_menu_options[self.menu_selection]
+            if option == "Trail Length":
+                current = self.settings_manager.get("trail_length")
+                new_length = max(0, min(500, current + direction * 10))
+                self.settings_manager.set("trail_length", new_length)
+            elif option == "Max Time Scale":
+                scales = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+                current = self.settings_manager.get("max_time_scale")
+                try:
+                    current_index = scales.index(current)
+                    new_index = max(0, min(len(scales) - 1, current_index + direction))
+                    self.settings_manager.set("max_time_scale", scales[new_index])
+                except ValueError:
+                    self.settings_manager.set("max_time_scale", 1024)
+            elif option == "Physics Method":
+                methods = ["single_step", "multi_step", "patched_conic"]
+                current = self.settings_manager.get("physics_method")
+                try:
+                    current_index = methods.index(current)
+                    new_index = (current_index + direction) % len(methods)
+                    new_method = methods[new_index]
+                    self.settings_manager.set("physics_method", new_method)
+                    # Update the settings module directly
+                    settings.PHYSICS_INTEGRATION_METHOD = new_method
+                    print(f"Physics method changed to: {new_method}")
+                except ValueError:
+                    self.settings_manager.set("physics_method", "multi_step")
+                    settings.PHYSICS_INTEGRATION_METHOD = "multi_step"
+
+    def _select_menu_option(self) -> None:
+        """Handle menu option selection."""
+        if self.menu_state == "main":
+            option = self.main_menu_options[self.menu_selection]
+            if option == "Select Scenario":
+                self.menu_state = "scenario"
+                try:
+                    self.menu_selection = self.available_scenarios.index(self.scenario)
+                except ValueError:
+                    self.menu_selection = 0
+            elif option == "Settings":
+                self.menu_state = "settings"
+                self.menu_selection = 0
+            elif option == "Controls":
+                self.menu_state = "controls"
+                self.menu_selection = 0
+            elif option == "Resume":
+                self.menu_open = False
+                self.paused = False
+            elif option == "Quit":
+                self.running = False
+
+        elif self.menu_state == "scenario":
+            selected_scenario = self.available_scenarios[self.menu_selection]
+            self.switch_scenario(selected_scenario)
+            self.menu_open = False
+            self.paused = False
+
+        elif self.menu_state == "settings":
+            option = self.settings_menu_options[self.menu_selection]
+            if option == "Audio":
+                self.menu_state = "audio"
+                self.menu_selection = 0
+            elif option == "Graphics":
+                self.menu_state = "graphics"
+                self.menu_selection = 0
+            elif option == "Gameplay":
+                self.menu_state = "gameplay"
+                self.menu_selection = 0
+            elif option == "Reset to Defaults":
+                self.settings_manager.reset_to_defaults()
+                self._apply_all_settings()
+                print("Settings reset to defaults")
+            elif option == "Back":
+                self.menu_state = "main"
+                self.menu_selection = 1  # Settings option
+
+        elif self.menu_state == "controls":
+            option = self.controls_menu_options[self.menu_selection]
+            if option == "Back":
+                self.menu_state = "main"
+                self.menu_selection = 2  # Controls option
+
+        elif self.menu_state in ["audio", "graphics", "gameplay"]:
+            option_lists = {
+                "audio": self.audio_menu_options,
+                "graphics": self.graphics_menu_options,
+                "gameplay": self.gameplay_menu_options
+            }
+            option = option_lists[self.menu_state][self.menu_selection]
+            if option == "Back":
+                # Map submenu states to their index in settings menu
+                submenu_mapping = {"audio": 0, "graphics": 1, "gameplay": 2}
+                menu_selection = submenu_mapping.get(self.menu_state, 0)
+                self.menu_state = "settings"
+                self.menu_selection = menu_selection
+
+    def _go_back_menu(self) -> None:
+        """Handle ESC key in menus (go back)."""
+        if self.menu_state == "main":
+            self.menu_open = False
+            # Don't change pause state when closing menu
+        elif self.menu_state == "scenario":
+            self.menu_state = "main"
+            self.menu_selection = 0  # Select Scenario option
+        elif self.menu_state == "settings":
+            self.menu_state = "main"
+            self.menu_selection = 1  # Settings option
+        elif self.menu_state == "controls":
+            self.menu_state = "main"
+            self.menu_selection = 2  # Controls option
+        elif self.menu_state in ["audio", "graphics", "gameplay"]:
+            self.menu_state = "settings"
+            submenu_index = {"audio": 0, "graphics": 1, "gameplay": 2}
+            self.menu_selection = submenu_index.get(self.menu_state, 0)
+
+    def _apply_all_settings(self) -> None:
+        """Apply all settings from the settings manager."""
+        settings.SHOW_LABELS = self.settings_manager.get("show_labels")
+        settings.SHOW_TRAILS = self.settings_manager.get("show_trails")
+        self.audio_manager.set_volume(self.settings_manager.get("music_volume"))
+
+        # Apply physics method setting
+        physics_method = self.settings_manager.get("physics_method")
+        settings.PHYSICS_INTEGRATION_METHOD = physics_method
+
+        # Apply other settings as needed
+        if self.settings_manager.get("fullscreen") != self.renderer.is_fullscreen:
+            self.renderer.toggle_fullscreen()
 
     def _create_satellite_at_position(self, x: float, y: float) -> None:
         """Create a new satellite at the given world coordinates with zero velocity."""
@@ -301,21 +533,8 @@ class SolarSystemSimulation:
                     self.body_drag_current_pos = event.pos
             elif event.type == pygame.KEYDOWN:
                 if self.menu_open:
-                    # Handle menu navigation
-                    if event.key == pygame.K_UP:
-                        self.menu_selection = (self.menu_selection - 1) % len(self.available_scenarios)
-                    elif event.key == pygame.K_DOWN:
-                        self.menu_selection = (self.menu_selection + 1) % len(self.available_scenarios)
-                    elif event.key == pygame.K_RETURN:
-                        # Select scenario and close menu
-                        selected_scenario = self.available_scenarios[self.menu_selection]
-                        self.switch_scenario(selected_scenario)
-                        self.menu_open = False
-                        self.paused = False  # Resume simulation
-                    elif event.key == pygame.K_ESCAPE:
-                        # Close menu without changing scenario
-                        self.menu_open = False
-                        # Don't change pause state when closing menu
+                    # Handle menu navigation based on current menu state
+                    self._handle_menu_input(event.key)
                 else:
                     # Handle normal game controls
                     if event.key == pygame.K_SPACE:
@@ -332,11 +551,13 @@ class SolarSystemSimulation:
                         # Note: _setup_bodies() already resets total_satellites_created to 1
                     elif event.key == pygame.K_l:
                         # Toggle labels
-                        settings.SHOW_LABELS = not settings.SHOW_LABELS
+                        self.settings_manager.set("show_labels", not self.settings_manager.get("show_labels"))
+                        settings.SHOW_LABELS = self.settings_manager.get("show_labels")
                         print(f"Labels {'enabled' if settings.SHOW_LABELS else 'disabled'}")
                     elif event.key == pygame.K_t:
                         # Toggle trails
-                        settings.SHOW_TRAILS = not settings.SHOW_TRAILS
+                        self.settings_manager.set("show_trails", not self.settings_manager.get("show_trails"))
+                        settings.SHOW_TRAILS = self.settings_manager.get("show_trails")
                         print(f"Trails {'enabled' if settings.SHOW_TRAILS else 'disabled'}")
                     elif event.key == pygame.K_c:
                         # Clear trails and impact markers
@@ -366,15 +587,13 @@ class SolarSystemSimulation:
                     elif event.key == pygame.K_F11:
                         # Toggle fullscreen
                         self.renderer.toggle_fullscreen()
+                        self.settings_manager.set("fullscreen", self.renderer.is_fullscreen)
                     elif event.key == pygame.K_ESCAPE:
-                        # Open menu instead of exiting
+                        # Open main menu
                         self.menu_open = True
+                        self.menu_state = "main"
+                        self.menu_selection = 3  # Default to "Resume" (0=Scenario, 1=Settings, 2=Controls, 3=Resume)
                         self.paused = True  # Pause simulation when menu opens
-                        # Set menu selection to current scenario
-                        try:
-                            self.menu_selection = self.available_scenarios.index(self.scenario)
-                        except ValueError:
-                            self.menu_selection = 0
                     elif event.key == pygame.K_q:
                         # Q key to quit directly
                         self.running = False
@@ -496,32 +715,13 @@ class SolarSystemSimulation:
         self.renderer.present()
 
     def _draw_instructions(self) -> None:
-        """Draw control instructions on screen."""
+        """Draw simplified control instructions on screen."""
         font = self.renderer.get_font('red_alert_small')
-        instructions = [
-            "SPACE/P: Pause/Resume",
-            "ESC: Open scenario menu",
-            "Q: Quit simulation",
-            "R: Reset simulation",
-            "L: Toggle labels",
-            "T: Toggle trails",
-            "C: Clear trails & impacts",
-            "M: Mute/Unmute music",
-            "Left-drag: Create custom body",
-            "Right-drag: Create satellite",
-            "Scroll: Zoom in/out",
-            "+/-: Zoom keyboard",
-            ",/.: Time scale slower/faster",
-            "F11: Toggle fullscreen"
-        ]
+        instruction_text = "ESC: Menu"
 
-        # Calculate the total height needed and start from bottom
-        total_height = len(instructions) * 22
-        y_offset = self.renderer.height - total_height - 10  # 10px margin from bottom
-        for instruction in instructions:
-            text_surface = font.render(instruction, True, (255, 255, 255))
-            self.renderer.screen.blit(text_surface, (10, y_offset))
-            y_offset += 22
+        text_surface = font.render(instruction_text, True, (255, 255, 255))
+        # Position in bottom-left corner with some margin
+        self.renderer.screen.blit(text_surface, (10, self.renderer.height - 30))
 
     def _draw_zoom_info(self) -> None:
         """Draw current zoom level."""
@@ -600,69 +800,36 @@ class SolarSystemSimulation:
         self.renderer.screen.blit(text_surface, (x_pos, 100))
 
     def _draw_scenario_menu(self) -> None:
-        """Draw the scenario selection menu."""
+        """Draw the menu system."""
         if not self.menu_open:
             return
 
-        # Create semi-transparent overlay
-        overlay = pygame.Surface((self.renderer.width, self.renderer.height))
-        overlay.set_alpha(128)
-        overlay.fill((0, 0, 0))
-        self.renderer.screen.blit(overlay, (0, 0))
+        # Get the current menu options based on state
+        if self.menu_state == "main":
+            options = self.main_menu_options
+        elif self.menu_state == "scenario":
+            options = [self.scenario_names.get(scenario, scenario) for scenario in self.available_scenarios]
+        elif self.menu_state == "settings":
+            options = self.settings_menu_options
+        elif self.menu_state == "controls":
+            options = self.controls_menu_options
+        elif self.menu_state == "audio":
+            options = self.audio_menu_options
+        elif self.menu_state == "graphics":
+            options = self.graphics_menu_options
+        elif self.menu_state == "gameplay":
+            options = self.gameplay_menu_options
+        else:
+            options = ["Unknown State"]
 
-        # Menu dimensions
-        menu_width = 400
-        menu_height = 350
-        menu_x = (self.renderer.width - menu_width) // 2
-        menu_y = (self.renderer.height - menu_height) // 2
-
-        # Draw menu background
-        menu_rect = pygame.Rect(menu_x, menu_y, menu_width, menu_height)
-        pygame.draw.rect(self.renderer.screen, (40, 40, 60), menu_rect)
-        pygame.draw.rect(self.renderer.screen, (100, 100, 120), menu_rect, 3)
-
-        # Draw title
-        title_font = self.renderer.get_font('red_alert_large')
-        title_text = title_font.render("SELECT SCENARIO", True, (255, 255, 255))
-        title_x = menu_x + (menu_width - title_text.get_width()) // 2
-        self.renderer.screen.blit(title_text, (title_x, menu_y + 20))
-
-        # Draw scenario options
-        option_font = self.renderer.get_font('red_alert_medium')
-        start_y = menu_y + 80
-
-        for i, scenario in enumerate(self.available_scenarios):
-            scenario_name = self.scenario_names[scenario]
-
-            # Highlight selected option
-            if i == self.menu_selection:
-                highlight_rect = pygame.Rect(menu_x + 10, start_y + i * 40 - 5, menu_width - 20, 35)
-                pygame.draw.rect(self.renderer.screen, (80, 80, 100), highlight_rect)
-                color = (255, 255, 100)  # Yellow for selected
-            else:
-                color = (200, 200, 200)  # Gray for unselected
-
-            # Current scenario indicator
-            if scenario == self.scenario:
-                indicator = "► "
-            else:
-                indicator = "  "
-
-            option_text = option_font.render(f"{indicator}{scenario_name}", True, color)
-            self.renderer.screen.blit(option_text, (menu_x + 20, start_y + i * 40))
-
-        # Draw instructions
-        instruction_font = self.renderer.get_font('red_alert_small')
-        instructions = [
-            "↑↓: Navigate    ENTER: Select    ESC: Cancel"
-        ]
-
-        instruction_y = menu_y + menu_height - 40
-        for instruction in instructions:
-            instruction_text = instruction_font.render(instruction, True, (180, 180, 180))
-            instruction_x = menu_x + (menu_width - instruction_text.get_width()) // 2
-            self.renderer.screen.blit(instruction_text, (instruction_x, instruction_y))
-            instruction_y += 20
+        # Use the renderer's new menu drawing method
+        self.renderer.draw_menu(
+            self.menu_state,
+            self.menu_selection,
+            options,
+            self.settings_manager,
+            self.audio_manager
+        )
 
     def run(self) -> None:
         """Main simulation loop."""

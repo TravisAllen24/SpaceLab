@@ -63,9 +63,11 @@ class Renderer:
 
     def _load_custom_fonts(self) -> None:
         """Load custom fonts from the fonts directory."""
-        # Get the path to the fonts directory
+        # Get the path to the fonts directory in media folder
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        fonts_dir = os.path.join(current_dir, "fonts")
+        # Go up one level to spacelab, then into media/fonts
+        spacelab_dir = os.path.dirname(current_dir)
+        fonts_dir = os.path.join(spacelab_dir, "media", "fonts")
 
         # Initialize font dictionaries
         self.custom_fonts = {}
@@ -357,6 +359,155 @@ class Renderer:
             text_y = text_y + 40  # Move below arrow if above screen
 
         self.screen.blit(text_surface, (text_x, text_y))
+
+    def draw_menu(self, menu_state: str, menu_selection: int, options: List[str], settings_manager, audio_manager) -> None:
+        """Draw the menu system based on current state."""
+        # Create semi-transparent overlay
+        overlay = pygame.Surface((self.width, self.height))
+        overlay.set_alpha(180)
+        overlay.fill((0, 0, 0))
+        self.screen.blit(overlay, (0, 0))
+
+        # Calculate required height for menu content
+        title_height = 60
+
+        # Use smaller line height for controls menu
+        if menu_state == "controls":
+            options_height = len(options) * 35
+        else:
+            options_height = len(options) * 50
+
+        instructions = self._get_menu_instructions(menu_state)
+        instructions_height = 40 if instructions else 20  # Single line for horizontal instructions
+
+        # Calculate total menu height with proper padding
+        menu_width = 600
+        menu_height = title_height + options_height + instructions_height + 40  # 40px total padding
+        menu_height = min(menu_height, self.height - 40)  # Leave some margin from screen edges
+
+        menu_x = (self.width - menu_width) // 2
+        menu_y = (self.height - menu_height) // 2
+
+        # Draw menu background
+        pygame.draw.rect(self.screen, (20, 20, 40), (menu_x, menu_y, menu_width, menu_height))
+        pygame.draw.rect(self.screen, (255, 255, 255), (menu_x, menu_y, menu_width, menu_height), 3)
+
+        # Draw title
+        title_text = self._get_menu_title(menu_state)
+        title_font = self.custom_fonts.get('red_alert_title', self.fallback_font)
+        title_surface = title_font.render(title_text, True, (255, 255, 255))
+        title_x = menu_x + (menu_width - title_surface.get_width()) // 2
+        title_y = menu_y + 20
+        self.screen.blit(title_surface, (title_x, title_y))
+
+        # Draw options
+        start_y = title_y + 60
+        for i, option in enumerate(options):
+            # Determine color based on selection
+            if i == menu_selection:
+                color = (255, 255, 0)  # Yellow for selected
+                # Draw selection highlight with appropriate height
+                if menu_state == "controls":
+                    highlight_height = 30
+                    line_height = 35
+                else:
+                    highlight_height = 40
+                    line_height = 50
+                highlight_rect = pygame.Rect(menu_x + 20, start_y + i * line_height - 5, menu_width - 40, highlight_height)
+                pygame.draw.rect(self.screen, (60, 60, 100), highlight_rect)
+            else:
+                color = (255, 255, 255)  # White for unselected
+                # Set line height for positioning
+                if menu_state == "controls":
+                    line_height = 35
+                else:
+                    line_height = 50
+
+            # Render option text with value if applicable
+            option_text = self._get_option_display_text(menu_state, option, settings_manager, audio_manager)
+
+            # Use smaller font for controls menu to look more like plain text
+            if menu_state == "controls":
+                font = self.custom_fonts.get('red_alert_medium', self.fallback_font)
+                line_height = 35  # Smaller line height for controls
+            else:
+                font = self.custom_fonts.get('red_alert_large', self.fallback_font)
+                line_height = 50  # Normal line height
+
+            text_surface = font.render(option_text, True, color)
+            text_x = menu_x + 40
+            text_y = start_y + i * line_height
+            self.screen.blit(text_surface, (text_x, text_y))
+
+        # Draw instructions at the bottom with proper spacing (horizontal layout)
+        if instructions:
+            # Join all instructions with separator for horizontal display
+            instruction_text = "  •  ".join(instructions)
+            instruction_start_y = menu_y + menu_height - 30  # Single line height
+            medium_font = self.custom_fonts.get('red_alert_medium', self.fallback_font)
+            instruction_surface = medium_font.render(instruction_text, True, (200, 200, 200))
+            # Center the instruction text horizontally
+            instruction_x = menu_x + (menu_width - instruction_surface.get_width()) // 2
+            self.screen.blit(instruction_surface, (instruction_x, instruction_start_y))
+
+    def _get_menu_title(self, menu_state: str) -> str:
+        """Get the title for the current menu state."""
+        titles = {
+            "main": "SPACELAB MENU",
+            "scenario": "SELECT SCENARIO",
+            "settings": "SETTINGS",
+            "controls": "CONTROLS",
+            "audio": "AUDIO SETTINGS",
+            "graphics": "GRAPHICS SETTINGS",
+            "gameplay": "GAMEPLAY SETTINGS"
+        }
+        return titles.get(menu_state, "MENU")
+
+    def _get_option_display_text(self, menu_state: str, option: str, settings_manager, audio_manager) -> str:
+        """Get the display text for a menu option, including current values."""
+        if menu_state == "audio":
+            if option == "Music Volume":
+                volume = settings_manager.get("music_volume")
+                return f"Music Volume: {int(volume * 100)}%"
+            elif option == "Sound Effects Volume":
+                volume = settings_manager.get("sound_effects_volume")
+                return f"Sound Effects Volume: {int(volume * 100)}%"
+            elif option == "Audio Enabled":
+                enabled = settings_manager.get("audio_enabled")
+                return f"Audio Enabled: {'ON' if enabled else 'OFF'}"
+        elif menu_state == "graphics":
+            if option == "Show Labels":
+                enabled = settings_manager.get("show_labels")
+                return f"Show Labels: {'ON' if enabled else 'OFF'}"
+            elif option == "Show Trails":
+                enabled = settings_manager.get("show_trails")
+                return f"Show Trails: {'ON' if enabled else 'OFF'}"
+            elif option == "Show FPS":
+                enabled = settings_manager.get("show_fps")
+                return f"Show FPS: {'ON' if enabled else 'OFF'}"
+            elif option == "Fullscreen":
+                return f"Fullscreen: {'ON' if self.is_fullscreen else 'OFF'}"
+        elif menu_state == "gameplay":
+            if option == "Trail Length":
+                length = settings_manager.get("trail_length")
+                return f"Trail Length: {length}"
+            elif option == "Max Time Scale":
+                scale = settings_manager.get("max_time_scale")
+                return f"Max Time Scale: {scale}x"
+            elif option == "Physics Method":
+                method = settings_manager.get("physics_method")
+                return f"Physics Method: {method.replace('_', ' ').title()}"
+
+        return option
+
+    def _get_menu_instructions(self, menu_state: str) -> List[str]:
+        """Get instruction text for the current menu state."""
+        if menu_state in ["audio", "graphics", "gameplay"]:
+            return ["↑↓ Navigate", "←→ Adjust", "ENTER Select", "ESC Back"]
+        elif menu_state == "controls":
+            return ["↑↓ Navigate", "ESC Back"]
+        else:
+            return ["↑↓ Navigate", "ENTER Select", "ESC Back"]
 
     def present(self) -> None:
         """Present the rendered frame to screen."""

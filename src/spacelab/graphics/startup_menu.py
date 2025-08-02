@@ -17,9 +17,11 @@ class StartupMenu:
         # Load background image
         self.background_image = None
         try:
-            # Get the path to the background image
+            # Get the path to the background image in media folder
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            image_path = os.path.join(current_dir, "images", "8bit-space.jpg")
+            # Go up one level to spacelab, then into media/images
+            spacelab_dir = os.path.dirname(current_dir)
+            image_path = os.path.join(spacelab_dir, "media", "images", "8bit-space.jpg")
             self.background_image = pygame.image.load(image_path)
             # Scale the background to fit the screen
             self.background_image = pygame.transform.scale(self.background_image, screen.get_size())
@@ -71,9 +73,11 @@ class StartupMenu:
 
     def _load_custom_fonts(self) -> None:
         """Load custom fonts from the fonts directory."""
-        # Get the path to the fonts directory
+        # Get the path to the fonts directory in media folder
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        fonts_dir = os.path.join(current_dir, "fonts")
+        # Go up one level to spacelab, then into media/fonts
+        spacelab_dir = os.path.dirname(current_dir)
+        fonts_dir = os.path.join(spacelab_dir, "media", "fonts")
 
         try:
             # Look for Red Alert font files
