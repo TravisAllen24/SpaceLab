@@ -132,7 +132,7 @@ class Renderer:
         world_y = (center_y - screen_y) / (SCALE_FACTOR * self.zoom) + self.camera_offset_y  # Flip Y axis back
         return (world_x, world_y)
 
-    def move_camera(self, delta_screen_x: int, delta_screen_y: int) -> None:
+    def move_camera(self, delta_screen_x: int, delta_screen_y: int, clear_markers_callback=None) -> None:
         """Move the camera by screen pixel amounts."""
         # Convert screen delta to world delta and apply to camera offset
         delta_world_x = delta_screen_x / (SCALE_FACTOR * self.zoom)
@@ -143,35 +143,54 @@ class Renderer:
         # Clear trails when camera moves to prevent distortion
         self.trails.clear()
 
+        # Clear collision markers if callback provided
+        if clear_markers_callback:
+            clear_markers_callback()
+
+    def reset_camera_and_zoom(self) -> None:
+        """Reset camera position and zoom to default values."""
+        self.camera_offset_x = 0.0
+        self.camera_offset_y = 0.0
+        self.zoom = ZOOM_FACTOR
+        # Clear trails when resetting view
+        self.trails.clear()
+        print("Camera position and zoom reset to defaults")
+
     def calculate_render_radius(self, body: CelestialBody) -> int:
         """Calculate the radius for rendering a celestial body."""
         # Scale the radius with zoom - no cap, allowing true size when zoomed in
         scaled_radius = max(int(body.radius_km * SCALE_FACTOR * self.zoom), MIN_RENDER_RADIUS)
         return scaled_radius
 
-    def zoom_in(self) -> None:
+    def zoom_in(self, clear_markers_callback=None) -> None:
         """Zoom in by multiplying zoom level."""
         old_zoom = self.zoom
         self.zoom = min(self.zoom * 1.2, MAX_ZOOM)  # 20% increase each step
         # Clear trails when zoom changes to prevent distortion
         if self.zoom != old_zoom:
             self.trails.clear()
+            # Clear collision markers if callback provided
+            if clear_markers_callback:
+                clear_markers_callback()
 
-    def zoom_out(self) -> None:
+    def zoom_out(self, clear_markers_callback=None) -> None:
         """Zoom out by dividing zoom level."""
         old_zoom = self.zoom
         self.zoom = max(self.zoom / 1.2, MIN_ZOOM)  # 20% decrease each step
         # Clear trails when zoom changes to prevent distortion
         if self.zoom != old_zoom:
             self.trails.clear()
+            # Clear collision markers if callback provided
+            if clear_markers_callback:
+                clear_markers_callback()
 
-    def handle_zoom_event(self, event) -> None:
+    def handle_zoom_event(self, event, clear_markers_callback=None) -> None:
         """Handle mouse wheel zoom events."""
         if event.type == pygame.MOUSEWHEEL:
             if event.y > 0:  # Scroll up
-                self.zoom_in()
+                self.zoom_in(clear_markers_callback)
             elif event.y < 0:  # Scroll down
-                self.zoom_out()
+                self.zoom_out(clear_markers_callback)
 
     def toggle_fullscreen(self) -> None:
         """Toggle between fullscreen and windowed mode."""

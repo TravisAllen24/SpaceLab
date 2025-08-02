@@ -143,6 +143,7 @@ class SolarSystemSimulation:
         self._setup_bodies()
         self.impact_markers.clear()
         self.renderer.trails.clear()
+        self.renderer.reset_camera_and_zoom()  # Reset camera position and zoom
         self.simulation_time_elapsed = 0.0
         self.real_time_start = pygame.time.get_ticks()
         self.audio_manager.play_scenario_music(self.scenario)
@@ -349,6 +350,10 @@ class SolarSystemSimulation:
         # Apply other settings as needed
         if self.settings_manager.get("fullscreen") != self.renderer.is_fullscreen:
             self.renderer.toggle_fullscreen()
+
+    def _clear_collision_markers(self) -> None:
+        """Helper method to clear collision markers (for use as callback)."""
+        self.impact_markers.clear()
 
     def _calculate_exponential_velocity(self, drag_pixels: float) -> float:
         """
@@ -564,7 +569,7 @@ class SolarSystemSimulation:
                 self.running = False
             elif event.type == pygame.MOUSEWHEEL:
                 # Handle zoom
-                self.renderer.handle_zoom_event(event)
+                self.renderer.handle_zoom_event(event, self._clear_collision_markers)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 keys = pygame.key.get_pressed()
                 if event.button == 1:  # Left mouse button
@@ -606,7 +611,7 @@ class SolarSystemSimulation:
                         delta_x = event.pos[0] - self.camera_pan_last_pos[0]
                         delta_y = event.pos[1] - self.camera_pan_last_pos[1]
                         # Move camera in opposite direction of mouse movement
-                        self.renderer.move_camera(-delta_x, -delta_y)
+                        self.renderer.move_camera(-delta_x, -delta_y, self._clear_collision_markers)
                     self.camera_pan_last_pos = event.pos
                 elif self.is_dragging_satellite:
                     self.satellite_drag_current_pos = event.pos
@@ -626,6 +631,7 @@ class SolarSystemSimulation:
                         self._setup_bodies()  # Reset simulation
                         self.impact_markers.clear()  # Clear impact markers
                         self.renderer.trails.clear()  # Clear trails
+                        self.renderer.reset_camera_and_zoom()  # Reset camera position and zoom
                         self.simulation_time_elapsed = 0.0  # Reset elapsed time
                         self.real_time_start = pygame.time.get_ticks()  # Reset real time tracker
                         self.audio_manager.play_scenario_music(self.scenario)  # Restart music
@@ -649,10 +655,10 @@ class SolarSystemSimulation:
                         self.audio_manager.toggle_mute()
                     elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
                         # Zoom in with keyboard
-                        self.renderer.zoom_in()
+                        self.renderer.zoom_in(self._clear_collision_markers)
                     elif event.key == pygame.K_MINUS:
                         # Zoom out with keyboard
-                        self.renderer.zoom_out()
+                        self.renderer.zoom_out(self._clear_collision_markers)
                     elif event.key == pygame.K_PERIOD or event.key == pygame.K_GREATER:
                         # Increase time scale (speed up simulation)
                         if self.current_time_scale_index < len(self.time_scale_values) - 1:
