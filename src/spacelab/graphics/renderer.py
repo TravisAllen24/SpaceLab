@@ -78,16 +78,16 @@ class Renderer:
 
             # Load the INET version as primary, LAN as backup
             if os.path.exists(red_alert_inet_path):
-                self.custom_fonts['red_alert_small'] = pygame.font.Font(red_alert_inet_path, 18)
-                self.custom_fonts['red_alert_medium'] = pygame.font.Font(red_alert_inet_path, 24)
-                self.custom_fonts['red_alert_large'] = pygame.font.Font(red_alert_inet_path, 32)
-                self.custom_fonts['red_alert_title'] = pygame.font.Font(red_alert_inet_path, 48)
+                self.custom_fonts['red_alert_small'] = pygame.font.Font(red_alert_inet_path, 14)
+                self.custom_fonts['red_alert_medium'] = pygame.font.Font(red_alert_inet_path, 18)
+                self.custom_fonts['red_alert_large'] = pygame.font.Font(red_alert_inet_path, 24)
+                self.custom_fonts['red_alert_title'] = pygame.font.Font(red_alert_inet_path, 36)
                 print(f"Loaded custom font: C&C Red Alert [INET]")
             elif os.path.exists(red_alert_lan_path):
-                self.custom_fonts['red_alert_small'] = pygame.font.Font(red_alert_lan_path, 18)
-                self.custom_fonts['red_alert_medium'] = pygame.font.Font(red_alert_lan_path, 24)
-                self.custom_fonts['red_alert_large'] = pygame.font.Font(red_alert_lan_path, 32)
-                self.custom_fonts['red_alert_title'] = pygame.font.Font(red_alert_lan_path, 48)
+                self.custom_fonts['red_alert_small'] = pygame.font.Font(red_alert_lan_path, 14)
+                self.custom_fonts['red_alert_medium'] = pygame.font.Font(red_alert_lan_path, 18)
+                self.custom_fonts['red_alert_large'] = pygame.font.Font(red_alert_lan_path, 24)
+                self.custom_fonts['red_alert_title'] = pygame.font.Font(red_alert_lan_path, 36)
                 print(f"Loaded custom font: C&C Red Alert [LAN]")
             else:
                 print("Custom Red Alert font files not found, using system fonts")
@@ -96,7 +96,7 @@ class Renderer:
             print(f"Error loading custom fonts: {e}")
 
         # Set up fallback font (system default)
-        self.fallback_font = pygame.font.Font(None, 20)
+        self.fallback_font = pygame.font.Font(None, 16)
 
     def get_font(self, font_name: str = 'red_alert_medium') -> pygame.font.Font:
         """Get a font by name, falling back to system font if not available."""
@@ -340,7 +340,7 @@ class Renderer:
 
         # Draw velocity magnitude text
         velocity_magnitude = length * velocity_scale
-        font = self.get_font('red_alert_small')
+        font = pygame.font.Font(None, 24)
         speed_text = f"{velocity_magnitude:.1f} km/s"
         text_surface = font.render(speed_text, True, color)
 

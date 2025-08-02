@@ -4,6 +4,7 @@ import pygame
 import sys
 from typing import List
 from .graphics.renderer import Renderer
+from .audio.audio_manager import AudioManager
 from .physics.gravity import apply_gravitational_forces
 from .physics.collision import detect_collisions, create_impact_marker
 from .bodies.celestial_body import CelestialBody
@@ -31,6 +32,7 @@ class SolarSystemSimulation:
     def __init__(self, scenario: str = "earth_moon"):
         """Initialize the simulation with a specific scenario."""
         self.renderer = Renderer()
+        self.audio_manager = AudioManager()
         self.bodies: List[CelestialBody] = []
         self.impact_markers: List[ImpactMarker] = []
         self.running = True
@@ -57,8 +59,15 @@ class SolarSystemSimulation:
         self.current_time_scale_index = self.time_scale_values.index(1)  # Default to 1x (normal speed)
         self.time_scale = self.time_scale_values[self.current_time_scale_index]
 
+        # Time tracking
+        self.simulation_time_elapsed = 0.0  # Total simulation time in seconds
+        self.real_time_start = pygame.time.get_ticks()  # Start time in milliseconds
+
         # Initialize celestial bodies based on scenario
         self._setup_bodies()
+
+        # Start background music for the scenario
+        self.audio_manager.play_scenario_music(self.scenario)
 
     def _setup_bodies(self) -> None:
         """Set up the initial celestial bodies based on the selected scenario."""
@@ -270,10 +279,15 @@ class SolarSystemSimulation:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     self.paused = not self.paused
+                elif event.key == pygame.K_p:
+                    self.paused = not self.paused
                 elif event.key == pygame.K_r:
                     self._setup_bodies()  # Reset simulation
                     self.impact_markers.clear()  # Clear impact markers
                     self.renderer.trails.clear()  # Clear trails
+                    self.simulation_time_elapsed = 0.0  # Reset elapsed time
+                    self.real_time_start = pygame.time.get_ticks()  # Reset real time tracker
+                    self.audio_manager.play_scenario_music(self.scenario)  # Restart music
                     # Note: _setup_bodies() already resets total_satellites_created to 1
                 elif event.key == pygame.K_l:
                     # Toggle labels
@@ -287,6 +301,9 @@ class SolarSystemSimulation:
                     # Clear trails and impact markers
                     self.renderer.trails.clear()
                     self.impact_markers.clear()
+                elif event.key == pygame.K_m:
+                    # Toggle mute
+                    self.audio_manager.toggle_mute()
                 elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
                     # Zoom in with keyboard
                     self.renderer.zoom_in()
@@ -324,6 +341,9 @@ class SolarSystemSimulation:
             for body in self.bodies:
                 body.update(dt)
 
+            # Update simulation time
+            self.simulation_time_elapsed += dt
+
             # Check for collisions
             collisions = detect_collisions(self.bodies)
             for colliding_body, target_body in collisions:
@@ -355,6 +375,9 @@ class SolarSystemSimulation:
 
                 # Check for collisions (only need to check once per frame, not every substep)
                 # We'll do this after all substeps are complete
+
+            # Update simulation time
+            self.simulation_time_elapsed += total_dt
 
             # Check for collisions after all physics steps
             collisions = detect_collisions(self.bodies)
@@ -407,6 +430,12 @@ class SolarSystemSimulation:
         # Draw time scale
         self._draw_time_scale_info()
 
+        # Draw elapsed time
+        self._draw_elapsed_time_info()
+
+        # Draw simulation status
+        self._draw_simulation_status()
+
         # Draw instructions
         self._draw_instructions()
 
@@ -416,11 +445,12 @@ class SolarSystemSimulation:
         """Draw control instructions on screen."""
         font = self.renderer.get_font('red_alert_small')
         instructions = [
-            "SPACE: Pause/Resume",
+            "SPACE/P: Pause/Resume",
             "R: Reset simulation",
             "L: Toggle labels",
             "T: Toggle trails",
             "C: Clear trails & impacts",
+            "M: Mute/Unmute music",
             "Left-drag: Create custom body",
             "Right-drag: Create satellite",
             "Scroll: Zoom in/out",
@@ -462,6 +492,58 @@ class SolarSystemSimulation:
         x_pos = self.renderer.width - text_surface.get_width() - 10
         self.renderer.screen.blit(text_surface, (x_pos, 40))
 
+    def _draw_elapsed_time_info(self) -> None:
+        """Draw elapsed simulation time."""
+        font = self.renderer.get_font('red_alert_small')
+
+        # Convert seconds to a more readable format
+        total_seconds = int(self.simulation_time_elapsed)
+
+        # Calculate years, days, hours, minutes, seconds
+        years = total_seconds // (365 * 24 * 3600)
+        remaining = total_seconds % (365 * 24 * 3600)
+        days = remaining // (24 * 3600)
+        remaining = remaining % (24 * 3600)
+        hours = remaining // 3600
+        remaining = remaining % 3600
+        minutes = remaining // 60
+        seconds = remaining % 60
+
+        # Format based on the largest time unit
+        if years > 0:
+            time_text = f"Elapsed: {years}y {days}d {hours}h"
+        elif days > 0:
+            time_text = f"Elapsed: {days}d {hours}h {minutes}m"
+        elif hours > 0:
+            time_text = f"Elapsed: {hours}h {minutes}m {seconds}s"
+        elif minutes > 0:
+            time_text = f"Elapsed: {minutes}m {seconds}s"
+        else:
+            time_text = f"Elapsed: {seconds}s"
+
+        text_surface = font.render(time_text, True, (255, 255, 255))
+
+        # Position in top-right corner, below time scale info
+        x_pos = self.renderer.width - text_surface.get_width() - 10
+        self.renderer.screen.blit(text_surface, (x_pos, 70))
+
+    def _draw_simulation_status(self) -> None:
+        """Draw simulation status (playing/paused)."""
+        font = self.renderer.get_font('red_alert_small')
+
+        if self.paused:
+            status_text = "PAUSED"
+            color = (255, 100, 100)  # Red-ish for paused
+        else:
+            status_text = "PLAYING"
+            color = (100, 255, 100)  # Green-ish for playing
+
+        text_surface = font.render(status_text, True, color)
+
+        # Position in top-right corner, below elapsed time info
+        x_pos = self.renderer.width - text_surface.get_width() - 10
+        self.renderer.screen.blit(text_surface, (x_pos, 100))
+
     def run(self) -> None:
         """Main simulation loop."""
         scenario_descriptions = {
@@ -477,11 +559,12 @@ class SolarSystemSimulation:
         if settings.PHYSICS_INTEGRATION_METHOD == "multi_step":
             print(f"Max Physics Steps Per Frame: {settings.MAX_PHYSICS_STEPS_PER_FRAME}")
         print("Controls:")
-        print("  SPACE: Pause/Resume")
+        print("  SPACE/P: Pause/Resume")
         print("  R: Reset simulation")
         print("  L: Toggle labels")
         print("  T: Toggle trails")
         print("  C: Clear trails & impacts")
+        print("  M: Mute/Unmute music")
         print("  Left-drag: Create custom body (with input dialog)")
         print("  Right-drag: Create satellite")
         print("  Mouse Wheel: Zoom in/out")
@@ -509,5 +592,6 @@ class SolarSystemSimulation:
 
             self.render()
 
+        self.audio_manager.cleanup()
         self.renderer.quit()
         print("Simulation ended.")
