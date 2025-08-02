@@ -11,6 +11,16 @@ class StartupMenu:
     def __init__(self, screen):
         self.screen = screen
 
+        # Initialize pygame mixer for startup music
+        try:
+            pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=512)
+            pygame.mixer.init()
+        except Exception as e:
+            print(f"Warning: Could not initialize audio for startup menu: {e}")
+
+        # Load startup music
+        self._load_startup_music()
+
         # Load custom fonts
         self._load_custom_fonts()
 
@@ -109,6 +119,53 @@ class StartupMenu:
             self.font_medium = pygame.font.Font(None, 24)
             self.font_small = pygame.font.Font(None, 16)
 
+    def _load_startup_music(self) -> None:
+        """Load startup menu background music."""
+        self.startup_music_path = None
+        self.music_playing = False
+
+        try:
+            # Get the path to the music directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            # Go up one level to spacelab, then into media/music
+            spacelab_dir = os.path.dirname(current_dir)
+            music_dir = os.path.join(spacelab_dir, "media", "music")
+
+            # Look for the startup music file
+            startup_music_file = "663230_Spaze---Light-Years-Away.mp3"
+            music_path = os.path.join(music_dir, startup_music_file)
+
+            if os.path.exists(music_path):
+                self.startup_music_path = music_path
+                print(f"Loaded startup music: {startup_music_file}")
+            else:
+                print(f"Startup music file not found: {startup_music_file}")
+
+        except Exception as e:
+            print(f"Error loading startup music: {e}")
+
+    def start_music(self) -> None:
+        """Start playing the startup menu music."""
+        if self.startup_music_path and not self.music_playing:
+            try:
+                pygame.mixer.music.load(self.startup_music_path)
+                pygame.mixer.music.set_volume(0.3)  # Lower volume for background
+                pygame.mixer.music.play(-1)  # Loop forever
+                self.music_playing = True
+                print("Started startup menu music")
+            except Exception as e:
+                print(f"Error playing startup music: {e}")
+
+    def stop_music(self) -> None:
+        """Stop the startup menu music."""
+        if self.music_playing:
+            try:
+                pygame.mixer.music.stop()
+                self.music_playing = False
+                print("Stopped startup menu music")
+            except Exception as e:
+                print(f"Error stopping startup music: {e}")
+
     def handle_event(self, event) -> Optional[str]:
         """Handle menu events. Returns selected scenario key or None."""
         if event.type == pygame.KEYDOWN:
@@ -194,15 +251,25 @@ def show_startup_menu(screen) -> Optional[str]:
     menu = StartupMenu(screen)
     clock = pygame.time.Clock()
 
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return "quit"
+    # Start the startup menu music
+    menu.start_music()
 
-            result = menu.handle_event(event)
-            if result is not None:
-                return result
+    try:
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    menu.stop_music()
+                    return "quit"
 
-        menu.draw()
-        pygame.display.flip()
-        clock.tick(60)
+                result = menu.handle_event(event)
+                if result is not None:
+                    menu.stop_music()
+                    return result
+
+            menu.draw()
+            pygame.display.flip()
+            clock.tick(60)
+    except Exception as e:
+        print(f"Error in startup menu: {e}")
+        menu.stop_music()
+        return "quit"
